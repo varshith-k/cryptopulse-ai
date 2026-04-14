@@ -1,6 +1,6 @@
 PROJECT_NAME=cryptopulse-ai
 
-.PHONY: help up down logs api frontend test lint format frontend-build smoke migrate ingest-stream ingest-backfill
+.PHONY: help up down logs api frontend test lint format frontend-build smoke migrate ingest-stream ingest-backfill ingest-once
 
 help:
 	@echo "Available targets:"
@@ -17,6 +17,7 @@ help:
 	@echo "  make migrate   - Run Alembic migrations inside the API container"
 	@echo "  make ingest-stream - Start Binance ingestion locally"
 	@echo "  make ingest-backfill - Run CoinGecko historical backfill locally"
+	@echo "  make ingest-once - Run one live CoinGecko refresh inside Docker"
 
 up:
 	docker compose up --build
@@ -52,6 +53,9 @@ ingest-stream:
 
 ingest-backfill:
 	cd services/ingestion && python3 src/coingecko_backfill.py
+
+ingest-once:
+	docker compose run --rm ingestion python -m src.coingecko_backfill
 
 lint:
 	cd apps/api && ruff check .

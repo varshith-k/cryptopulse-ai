@@ -21,6 +21,10 @@ class Settings(BaseSettings):
         default="https://api.coingecko.com/api/v3",
         alias="COINGECKO_BASE_URL",
     )
+    refresh_interval_seconds: int = Field(
+        default=300,
+        alias="INGESTION_REFRESH_INTERVAL_SECONDS",
+    )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

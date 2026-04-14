@@ -33,7 +33,7 @@ def build_backfill_event(symbol: str, payload: dict) -> NormalizedMarketEvent:
     )
 
 
-def main() -> None:
+def run_backfill() -> None:
     ids = ",".join(COIN_IDS.values())
     params = {
         "vs_currency": "usd",
@@ -65,6 +65,10 @@ def main() -> None:
                 f"[coingecko] inserted {symbol} price={event.price_usd:.4f} "
                 f"change24h={event.percent_change_24h:.2f}%"
             )
+
+
+def main() -> None:
+    run_backfill()
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ async def stream_market_overview(
     session: Session = Depends(get_db_session),
 ) -> StreamingResponse:
     async def event_generator():
-        for _ in range(5):
+        while True:
             overview = build_market_overview(session)
             payload = json.dumps(overview.model_dump())
             yield (
@@ -33,6 +33,6 @@ async def stream_market_overview(
                 "event: market_overview\n"
                 f"data: {payload}\n\n"
             )
-            await asyncio.sleep(2)
+            await asyncio.sleep(15)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

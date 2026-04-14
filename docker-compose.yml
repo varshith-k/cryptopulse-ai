@@ -32,7 +32,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     healthcheck:
-      test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep imok || exit 1"]
+      test: ["CMD-SHELL", "echo srvr | nc -w 2 localhost 2181 | grep Mode || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 8
@@ -94,6 +94,20 @@ services:
         condition: service_started
     ports:
       - "5173:5173"
+
+  ingestion:
+    build:
+      context: ./services/ingestion
+    env_file:
+      - .env
+    environment:
+      INGESTION_POSTGRES_URL: postgresql://cryptopulse:cryptopulse@postgres:5432/cryptopulse
+      KAFKA_BROKER: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
 volumes:
   postgres_data:

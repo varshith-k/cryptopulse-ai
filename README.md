@@ -187,9 +187,20 @@ This repository now includes the first practical pieces of that path:
 
 - `services/ingestion/src/binance_stream.py` for real-time Binance mini-ticker ingestion
 - `services/ingestion/src/coingecko_backfill.py` for CoinGecko historical/reference backfill
+- `services/ingestion/src/runner.py` for a continuous local refresh worker
 - normalized market event modeling and PostgreSQL snapshot writes in `services/ingestion/src/`
 
 This means the backend can start serving real externally sourced rows as soon as ingestion writes newer snapshots into `market_snapshots`.
+
+## Continuous local refresh
+
+For local development, the stack can now run a lightweight continuous ingestion worker that refreshes market snapshots on a fixed interval.
+
+- Default refresh interval: `300` seconds
+- Config variable: `INGESTION_REFRESH_INTERVAL_SECONDS`
+- Docker service: `ingestion`
+
+This gives you a simple always-fresh local setup without needing to keep a manual backfill command running.
 
 ## Resume-ready bullets
 
