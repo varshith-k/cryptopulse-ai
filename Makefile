@@ -1,6 +1,6 @@
 PROJECT_NAME=cryptopulse-ai
 
-.PHONY: help up down logs api frontend test lint format init-db
+.PHONY: help up down logs api frontend test lint format frontend-build smoke
 
 help:
 	@echo "Available targets:"
@@ -12,6 +12,8 @@ help:
 	@echo "  make test      - Run backend tests"
 	@echo "  make lint      - Run backend lint checks"
 	@echo "  make format    - Format backend code"
+	@echo "  make frontend-build - Run the frontend production build"
+	@echo "  make smoke     - Hit core health and readiness endpoints"
 
 up:
 	docker compose up --build
@@ -31,9 +33,16 @@ frontend:
 test:
 	cd apps/api && pytest
 
+frontend-build:
+	cd apps/frontend && npm run build
+
+smoke:
+	curl -s http://localhost:8000/health
+	curl -s http://localhost:8000/api/v1/system/ready
+	curl -s http://localhost:8080/health/ready
+
 lint:
 	cd apps/api && ruff check .
 
 format:
 	cd apps/api && ruff format .
-

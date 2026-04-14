@@ -72,6 +72,8 @@ docs/           Architecture and build documentation
 - Frontend: `http://localhost:5173`
 - API docs: `http://localhost:8000/docs`
 - Agent health: `http://localhost:8080/health`
+- API readiness: `http://localhost:8000/api/v1/system/ready`
+- Agent readiness: `http://localhost:8080/health/ready`
 
 ## What is implemented in Phase 1
 
@@ -107,11 +109,68 @@ docs/           Architecture and build documentation
 - Rule-based anomaly scoring using volatility, momentum, and RSI extremes
 - Natural-language handling for trend, summary, anomaly, comparison, and recommendation prompts
 
+## Phase 5 progress
+
+- Added API readiness and metrics endpoints for operational visibility
+- Added request logging middleware and lightweight in-memory request counters
+- Added agent readiness checks against backend dependencies
+- Expanded backend tests to cover analytics, system readiness, and alert creation
+- Hardened local orchestration with more health checks and clearer developer commands
+- Rewrote project guidance for portfolio presentation and interview walkthroughs
+
 ### Demo credentials
 
 - Email: `demo@cryptopulse.ai`
 - Password: `DemoPass123!`
 
-## Upcoming implementation details
+## Core API surface
 
-Phase 2 will replace the seeded overview responses with real database-backed services, then add authentication, live market ingestion, and the first ETL path for technical indicators.
+- `GET /api/v1/market/overview`
+- `GET /api/v1/market/stream`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/alerts`
+- `POST /api/v1/alerts`
+- `GET /api/v1/analytics/anomalies`
+- `GET /api/v1/analytics/summary`
+- `GET /api/v1/analytics/recommendations`
+- `GET /api/v1/system/ready`
+- `GET /api/v1/system/metrics`
+
+## Local development workflow
+
+```bash
+cp .env.example .env
+make up
+make smoke
+```
+
+Helpful commands:
+
+- `make down` stops the stack
+- `make logs` tails Docker Compose logs
+- `make test` runs backend tests
+- `make frontend-build` verifies the frontend production build
+- `python services/ingestion/src/backfill.py` inserts additional sample market rows locally
+
+## Architecture walkthrough
+
+1. Market data is ingested through the `services/ingestion` layer and is designed to publish normalized events to Kafka.
+2. Spark jobs in `services/streaming` are positioned to compute technical indicators and trend summaries.
+3. PostgreSQL serves curated market data, indicators, alerts, and AI insight artifacts.
+4. FastAPI exposes typed APIs, auth, SSE, analytics endpoints, and operational health checks.
+5. The agent service tool-calls backend analytics endpoints to generate grounded answers.
+6. The React dashboard consumes the API and agent through a browser-friendly Vite proxy layer.
+
+## Portfolio highlights
+
+- Built a full-stack crypto intelligence platform spanning React, FastAPI, PostgreSQL, Kafka, Spark, Docker, and an agentic AI service.
+- Designed a modular data-serving layer with JWT auth, SSE live updates, alert workflows, analytics endpoints, and OpenAPI documentation.
+- Implemented grounded AI reasoning over project data using backend tool calls for summaries, anomaly detection, comparisons, and metric recommendations.
+- Added operational polish with Docker Compose orchestration, readiness checks, request metrics, automated tests, and developer workflow automation.
+
+## Resume-ready bullets
+
+- Engineered `CryptoPulse AI`, a production-style crypto analytics platform with a React dashboard, FastAPI APIs, PostgreSQL serving layer, Kafka/Spark pipeline scaffolding, and Dockerized local orchestration.
+- Built backend services for JWT authentication, user-specific alerting, SSE-based live market updates, and analytics endpoints for technical summaries and anomaly detection.
+- Developed a grounded AI agent that tool-calls backend market and analytics APIs to answer natural-language questions, compare assets, detect unusual volatility, and recommend follow-up metrics.
+- Improved developer and operations workflows with health and readiness endpoints, request-level observability hooks, automated tests, and reproducible local setup scripts.
