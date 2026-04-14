@@ -36,3 +36,14 @@ export type AgentResponse = {
   grounded: boolean;
   sources: string[];
 };
+
+export type TokenResponse = {
+  access_token: string;
+  token_type: string;
+};
+
+export type UserRead = {
+  id: string;
+  email: string;
+  created_at: string;
+};

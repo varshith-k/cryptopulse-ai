@@ -1,6 +1,6 @@
 PROJECT_NAME=cryptopulse-ai
 
-.PHONY: help up down logs api frontend test lint format frontend-build smoke
+.PHONY: help up down logs api frontend test lint format frontend-build smoke migrate
 
 help:
 	@echo "Available targets:"
@@ -14,6 +14,7 @@ help:
 	@echo "  make format    - Format backend code"
 	@echo "  make frontend-build - Run the frontend production build"
 	@echo "  make smoke     - Hit core health and readiness endpoints"
+	@echo "  make migrate   - Run Alembic migrations inside the API container"
 
 up:
 	docker compose up --build
@@ -40,6 +41,9 @@ smoke:
 	curl -s http://localhost:8000/health
 	curl -s http://localhost:8000/api/v1/system/ready
 	curl -s http://localhost:8080/health/ready
+
+migrate:
+	docker compose run --rm api alembic upgrade head
 
 lint:
 	cd apps/api && ruff check .

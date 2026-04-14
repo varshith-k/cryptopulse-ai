@@ -150,6 +150,7 @@ Helpful commands:
 - `make logs` tails Docker Compose logs
 - `make test` runs backend tests
 - `make frontend-build` verifies the frontend production build
+- `make migrate` runs Alembic migrations inside the API container
 - `python services/ingestion/src/backfill.py` inserts additional sample market rows locally
 
 ## Architecture walkthrough
@@ -167,6 +168,14 @@ Helpful commands:
 - Designed a modular data-serving layer with JWT auth, SSE live updates, alert workflows, analytics endpoints, and OpenAPI documentation.
 - Implemented grounded AI reasoning over project data using backend tool calls for summaries, anomaly detection, comparisons, and metric recommendations.
 - Added operational polish with Docker Compose orchestration, readiness checks, request metrics, automated tests, and developer workflow automation.
+
+## What remains before real production deployment
+
+- Replace seeded market data with a live exchange/provider ingestion path in the default runtime flow.
+- Run Kafka to Spark to PostgreSQL indicator writes end to end instead of using the current seeded serving dataset.
+- Add CI/CD, secrets management, cloud deployment manifests, and persistent observability tooling.
+- Expand auth and account management with password reset, verification, and stronger session controls.
+- Move from bootstrap SQL plus local Alembic scaffolding to a single migration-led database lifecycle in all environments.
 
 ## Resume-ready bullets
 

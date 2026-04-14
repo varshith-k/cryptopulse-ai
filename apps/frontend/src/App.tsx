@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Sparkline } from "./components/Sparkline";
 import { StatCard } from "./components/StatCard";
@@ -9,12 +9,7 @@ import {
   formatTimestamp,
   formatUsd,
 } from "./lib/format";
-import type { AgentResponse, AlertRead, MarketAsset } from "./types";
-
-const demoCredentials = {
-  email: "demo@cryptopulse.ai",
-  password: "DemoPass123!",
-};
+import type { AgentResponse, AlertRead, MarketAsset, TokenResponse, UserRead } from "./types";
 
 const alertTypes = [
   { value: "price_above", label: "Price above" },
@@ -45,6 +40,7 @@ export default function App() {
   const { data, loading, error } = useMarketOverview();
   const [selectedSymbol, setSelectedSymbol] = useState("SOL");
   const [token, setToken] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserRead | null>(null);
   const [alerts, setAlerts] = useState<AlertRead[]>([]);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [alertsLoading, setAlertsLoading] = useState(false);
@@ -56,6 +52,12 @@ export default function App() {
   const [agentAnswer, setAgentAnswer] = useState<AgentResponse | null>(null);
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
 
   const assets = data?.assets ?? [];
   const selectedAsset =
@@ -73,28 +75,42 @@ export default function App() {
     return rsiValues.reduce((total, value) => total + value, 0) / rsiValues.length;
   }, [assets]);
 
-  async function authenticateDemoUser() {
-    setAlertsLoading(true);
-    setAlertsError(null);
+  useEffect(() => {
+    const storedToken = window.localStorage.getItem("cryptopulse_token");
+    if (storedToken) {
+      setToken(storedToken);
+    }
+  }, []);
 
+  useEffect(() => {
+    if (!token) {
+      setCurrentUser(null);
+      setAlerts([]);
+      window.localStorage.removeItem("cryptopulse_token");
+      return;
+    }
+
+    window.localStorage.setItem("cryptopulse_token", token);
+    void loadCurrentUser(token);
+    void loadAlerts(token);
+  }, [token]);
+
+  async function loadCurrentUser(accessToken: string) {
     try {
-      const response = await fetch("/api/v1/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(demoCredentials),
+      const response = await fetch("/api/v1/auth/me", {
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (!response.ok) {
-        throw new Error(`Login failed with status ${response.status}`);
+        throw new Error(`Profile request failed with status ${response.status}`);
       }
 
-      const payload = (await response.json()) as { access_token: string };
-      setToken(payload.access_token);
-      await loadAlerts(payload.access_token);
+      const payload = (await response.json()) as UserRead;
+      setCurrentUser(payload);
     } catch (nextError) {
-      setAlertsError(nextError instanceof Error ? nextError.message : "Unable to authenticate.");
-    } finally {
-      setAlertsLoading(false);
+      setAuthError(
+        nextError instanceof Error ? nextError.message : "Unable to load authenticated profile.",
+      );
     }
   }
 
@@ -114,7 +130,7 @@ export default function App() {
   async function submitAlert(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) {
-      setAlertsError("Authenticate with the demo account before creating an alert.");
+      setAlertsError("Sign in before creating an alert.");
       return;
     }
 
@@ -141,7 +157,7 @@ export default function App() {
         throw new Error(payload?.detail ?? `Alert creation failed with status ${response.status}`);
       }
 
-      setAlertSuccess("Alert created and saved for the demo user.");
+      setAlertSuccess("Alert created successfully.");
       await loadAlerts(token);
     } catch (nextError) {
       setAlertsError(
@@ -180,6 +196,57 @@ export default function App() {
     }
   }
 
+  async function submitAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
+    setAuthSuccess(null);
+
+    try {
+      if (authMode === "register") {
+        const registerResponse = await fetch("/api/v1/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: authEmail, password: authPassword }),
+        });
+
+        if (!registerResponse.ok) {
+          const payload = await registerResponse.json().catch(() => null);
+          throw new Error(payload?.detail ?? `Registration failed with status ${registerResponse.status}`);
+        }
+
+        setAuthSuccess("Account created. Signing you in now.");
+        setAuthMode("login");
+      }
+
+      const loginResponse = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: authEmail, password: authPassword }),
+      });
+
+      if (!loginResponse.ok) {
+        const payload = await loginResponse.json().catch(() => null);
+        throw new Error(payload?.detail ?? `Login failed with status ${loginResponse.status}`);
+      }
+
+      const payload = (await loginResponse.json()) as TokenResponse;
+      setToken(payload.access_token);
+      setAuthSuccess("Signed in successfully.");
+    } catch (nextError) {
+      setAuthError(nextError instanceof Error ? nextError.message : "Unable to complete authentication.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function signOut() {
+    setToken(null);
+    setAuthSuccess("Signed out.");
+    setAlertsError(null);
+    setAlertSuccess(null);
+  }
+
   return (
     <main className="min-h-screen bg-canvas text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-6 sm:px-8">
@@ -191,7 +258,7 @@ export default function App() {
                   CryptoPulse AI
                 </span>
                 <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-400">
-                  Phase 3 frontend dashboard
+                  Live market intelligence platform
                 </span>
               </div>
               <h1 className="mt-5 max-w-4xl font-display text-4xl leading-tight text-white sm:text-6xl">
@@ -199,9 +266,9 @@ export default function App() {
                 AI-assisted reasoning.
               </h1>
               <p className="mt-5 max-w-2xl text-base text-slate-300 sm:text-lg">
-                The dashboard now pulls live project data from the Phase 2 backend, tracks market
-                leaders, previews indicators, lets you test alert configuration, and routes natural
-                language questions to the agent service.
+                Track market leaders, inspect technical context, configure alerts, and ask
+                data-grounded questions through a production-style interface designed for local
+                deployment and engineering portfolio demos.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a className="button-primary" href="#dashboard">
@@ -440,22 +507,89 @@ export default function App() {
               <p className="eyebrow">Alert configuration</p>
               <h2 className="section-title">Demo alert workflow</h2>
               <p className="section-copy">
-                Authenticate with the seeded demo account, inspect saved alerts, and create a new
-                threshold rule against the live backend.
+                Create an account or sign in, inspect your saved alerts, and create threshold rules
+                against the live backend.
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={authenticateDemoUser}
-                  className="button-primary"
-                  disabled={alertsLoading}
-                >
-                  {token ? "Refresh demo alerts" : "Login as demo user"}
-                </button>
-                <span className="rounded-full border border-white/10 px-4 py-3 text-sm text-slate-400">
-                  {demoCredentials.email}
-                </span>
+              <div className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    className={authMode === "login" ? "button-primary flex-1" : "button-secondary flex-1"}
+                    onClick={() => setAuthMode("login")}
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    type="button"
+                    className={authMode === "register" ? "button-primary flex-1" : "button-secondary flex-1"}
+                    onClick={() => setAuthMode("register")}
+                  >
+                    Create account
+                  </button>
+                </div>
+
+                <form className="mt-4 space-y-4" onSubmit={submitAuth}>
+                  <label className="field">
+                    <span>Email</span>
+                    <input
+                      type="email"
+                      value={authEmail}
+                      onChange={(event) => setAuthEmail(event.target.value)}
+                      placeholder="you@example.com"
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Password</span>
+                    <input
+                      type="password"
+                      value={authPassword}
+                      onChange={(event) => setAuthPassword(event.target.value)}
+                      placeholder="Enter a secure password"
+                    />
+                  </label>
+                  <button className="button-primary w-full" type="submit" disabled={authLoading}>
+                    {authLoading
+                      ? "Processing..."
+                      : authMode === "login"
+                        ? "Sign in"
+                        : "Create account and sign in"}
+                  </button>
+                </form>
+
+                {!currentUser ? (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-white/10 bg-canvas/60 p-4">
+                    <p className="text-sm text-slate-400">
+                      Local sample account available for demos: <span className="text-white">demo@cryptopulse.ai</span>
+                    </p>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => {
+                        setAuthMode("login");
+                        setAuthEmail("demo@cryptopulse.ai");
+                        setAuthPassword("DemoPass123!");
+                      }}
+                    >
+                      Use sample account
+                    </button>
+                  </div>
+                ) : null}
+
+                {currentUser ? (
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-400/20 bg-emerald-400/10 p-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">Authenticated</p>
+                      <p className="mt-1 text-sm text-white">{currentUser.email}</p>
+                    </div>
+                    <button type="button" className="button-secondary" onClick={signOut}>
+                      Sign out
+                    </button>
+                  </div>
+                ) : null}
+
+                {authSuccess ? <p className="mt-4 text-sm text-emerald-300">{authSuccess}</p> : null}
+                {authError ? <p className="mt-4 text-sm text-rose-300">{authError}</p> : null}
               </div>
 
               <form className="mt-5 space-y-4" onSubmit={submitAlert}>
@@ -520,7 +654,7 @@ export default function App() {
                   ))
                 ) : (
                   <div className="rounded-[1.5rem] border border-dashed border-white/10 p-4 text-sm text-slate-400">
-                    Authenticate to load alerts for the demo user.
+                    Sign in to load alerts for the current account.
                   </div>
                 )}
               </div>
