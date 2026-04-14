@@ -83,7 +83,20 @@ docs/           Architecture and build documentation
 - Database bootstrap schema
 - Developer scripts and initial tests
 
+## Phase 2 progress
+
+- PostgreSQL-backed FastAPI models and session management
+- JWT authentication routes for register, login, and current user
+- User-specific alerts API
+- Database-seeded market overview endpoint with technical indicator context
+- SSE endpoint for lightweight live market updates
+- Historical backfill utility at `services/ingestion/src/backfill.py`
+
+### Demo credentials
+
+- Email: `demo@cryptopulse.ai`
+- Password: `DemoPass123!`
+
 ## Upcoming implementation details
 
 Phase 2 will replace the seeded overview responses with real database-backed services, then add authentication, live market ingestion, and the first ETL path for technical indicators.
-

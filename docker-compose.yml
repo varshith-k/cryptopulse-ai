@@ -46,7 +46,7 @@ services:
     build:
       context: ./apps/api
     env_file:
-      - .env.example
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,7 +59,7 @@ services:
     build:
       context: ./apps/agent
     env_file:
-      - .env.example
+      - .env
     depends_on:
       api:
         condition: service_started
@@ -70,7 +70,7 @@ services:
     build:
       context: ./apps/frontend
     env_file:
-      - .env.example
+      - .env
     depends_on:
       api:
         condition: service_started
@@ -81,4 +81,3 @@ services:
 
 volumes:
   postgres_data:
-

@@ -14,10 +14,21 @@ class Settings(BaseSettings):
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
     kafka_broker: str = Field(default="localhost:29092", alias="KAFKA_BROKER")
     jwt_secret: str = Field(default="change-me-in-production", alias="JWT_SECRET")
+    jwt_algorithm: str = "HS256"
+    jwt_expiration_minutes: int = 60
     api_cors_origins: str = Field(default="http://localhost:5173", alias="API_CORS_ORIGINS")
+    database_url: str | None = Field(default=None, alias="DATABASE_URL")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    @property
+    def resolved_database_url(self) -> str:
+        if self.database_url:
+            return self.database_url
+        return (
+            f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
 
 settings = Settings()
-

@@ -1,44 +1,38 @@
-from fastapi import APIRouter
+import asyncio
+import json
+from datetime import UTC, datetime
 
-from app.schemas.market import DashboardOverview, InsightCard, MarketSnapshot
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db_session
+from app.schemas.market import MarketOverviewResponse
+from app.services.market import build_market_overview
 
 router = APIRouter(prefix="/market", tags=["market"])
 
 
-@router.get("/overview", response_model=DashboardOverview)
-async def get_market_overview() -> DashboardOverview:
-    snapshots = [
-        MarketSnapshot(
-            symbol="BTC",
-            name="Bitcoin",
-            price_usd=68420.55,
-            percent_change_24h=2.84,
-            trend="Bullish",
-        ),
-        MarketSnapshot(
-            symbol="ETH",
-            name="Ethereum",
-            price_usd=3521.18,
-            percent_change_24h=1.91,
-            trend="Constructive",
-        ),
-        MarketSnapshot(
-            symbol="SOL",
-            name="Solana",
-            price_usd=162.74,
-            percent_change_24h=4.33,
-            trend="Momentum breakout",
-        ),
-    ]
-    insights = [
-        InsightCard(
-            title="Momentum leaders",
-            content="SOL and BTC are leading the 24h move, with strength supported by positive price change.",
-        ),
-        InsightCard(
-            title="Watchlist candidate",
-            content="ETH is trending upward more slowly and may deserve a volume confirmation check.",
-        ),
-    ]
-    return DashboardOverview(snapshots=snapshots, insights=insights)
+@router.get("/overview", response_model=MarketOverviewResponse)
+async def get_market_overview(
+    session: Session = Depends(get_db_session),
+) -> MarketOverviewResponse:
+    return build_market_overview(session)
 
+
+@router.get("/stream")
+async def stream_market_overview(
+    session: Session = Depends(get_db_session),
+) -> StreamingResponse:
+    async def event_generator():
+        for _ in range(5):
+            overview = build_market_overview(session)
+            payload = json.dumps(overview.model_dump())
+            yield (
+                f"id: {datetime.now(UTC).timestamp()}\n"
+                "event: market_overview\n"
+                f"data: {payload}\n\n"
+            )
+            await asyncio.sleep(2)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
