@@ -8,12 +8,17 @@
   color-scheme: dark;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   font-family: "Manrope", sans-serif;
   background:
     radial-gradient(circle at top left, rgba(45, 212, 191, 0.18), transparent 30%),
     radial-gradient(circle at right center, rgba(249, 115, 22, 0.14), transparent 25%),
+    linear-gradient(180deg, rgba(7, 15, 27, 0.96), rgba(9, 17, 31, 1)),
     #09111f;
 }
 
@@ -26,3 +31,69 @@ a {
   box-sizing: border-box;
 }
 
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-[2rem] border border-white/10 bg-panel/75 p-6 shadow-panel backdrop-blur-xl;
+  }
+
+  .eyebrow {
+    @apply text-xs uppercase tracking-[0.28em] text-accent;
+  }
+
+  .section-title {
+    @apply mt-3 font-display text-3xl text-white;
+  }
+
+  .section-copy {
+    @apply mt-2 text-sm leading-6 text-slate-400;
+  }
+
+  .button-primary {
+    @apply inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 font-semibold text-slate-950 transition hover:bg-[#5ce7d4] disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .button-secondary {
+    @apply inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-3 font-semibold text-white transition hover:border-white/35 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .field {
+    @apply block rounded-[1.5rem] border border-white/10 bg-white/5 p-4;
+  }
+
+  .field span {
+    @apply text-xs uppercase tracking-[0.2em] text-slate-500;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    @apply mt-3 w-full border-none bg-transparent p-0 text-base text-white outline-none placeholder:text-slate-500;
+  }
+
+  .metric-card {
+    @apply rounded-[1.25rem] border border-white/10 bg-canvas/60 p-4;
+  }
+
+  .metric-card span {
+    @apply text-xs uppercase tracking-[0.2em] text-slate-500;
+  }
+
+  .metric-card strong {
+    @apply mt-3 block font-display text-2xl text-white;
+  }
+
+  .skeleton-card {
+    @apply h-48 animate-pulse rounded-[1.75rem] border border-white/10 bg-white/5;
+  }
+}

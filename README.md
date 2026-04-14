@@ -92,6 +92,14 @@ docs/           Architecture and build documentation
 - SSE endpoint for lightweight live market updates
 - Historical backfill utility at `services/ingestion/src/backfill.py`
 
+## Phase 3 progress
+
+- API-driven React dashboard wired to the live market overview endpoint
+- Coin detail panel with trend chart proxy and technical indicator cards
+- Demo alert workflow connected to JWT auth and alert creation routes
+- AI insights panel connected to the agent service through Vite proxying
+- Responsive landing plus dashboard experience ready for portfolio demos
+
 ### Demo credentials
 
 - Email: `demo@cryptopulse.ai`
