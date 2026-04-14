@@ -268,7 +268,7 @@ export default function App() {
               <p className="mt-5 max-w-2xl text-base text-slate-300 sm:text-lg">
                 Track market leaders, inspect technical context, configure alerts, and ask
                 data-grounded questions through a production-style interface designed for local
-                deployment and engineering portfolio demos.
+                deployment, streaming analytics workflows, and portfolio-ready demonstrations.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a className="button-primary" href="#dashboard">
@@ -450,8 +450,28 @@ export default function App() {
                       <p className="eyebrow">Technical indicators</p>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2">
                         <div className="metric-card">
+                          <span>SMA 20</span>
+                          <strong>
+                            {selectedAsset.sma_20 !== null ? formatUsd(selectedAsset.sma_20) : "--"}
+                          </strong>
+                        </div>
+                        <div className="metric-card">
+                          <span>EMA 20</span>
+                          <strong>
+                            {selectedAsset.ema_20 !== null ? formatUsd(selectedAsset.ema_20) : "--"}
+                          </strong>
+                        </div>
+                        <div className="metric-card">
                           <span>RSI 14</span>
                           <strong>{selectedAsset.rsi_14?.toFixed(1) ?? "--"}</strong>
+                        </div>
+                        <div className="metric-card">
+                          <span>MACD</span>
+                          <strong>{selectedAsset.macd?.toFixed(2) ?? "--"}</strong>
+                        </div>
+                        <div className="metric-card">
+                          <span>Signal</span>
+                          <strong>{selectedAsset.signal?.toFixed(2) ?? "--"}</strong>
                         </div>
                         <div className="metric-card">
                           <span>Rolling volatility</span>
@@ -505,7 +525,7 @@ export default function App() {
           <div className="space-y-6">
             <section className="panel">
               <p className="eyebrow">Alert configuration</p>
-              <h2 className="section-title">Demo alert workflow</h2>
+              <h2 className="section-title">Account and alert workflow</h2>
               <p className="section-copy">
                 Create an account or sign in, inspect your saved alerts, and create threshold rules
                 against the live backend.
@@ -556,25 +576,6 @@ export default function App() {
                         : "Create account and sign in"}
                   </button>
                 </form>
-
-                {!currentUser ? (
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-white/10 bg-canvas/60 p-4">
-                    <p className="text-sm text-slate-400">
-                      Local sample account available for demos: <span className="text-white">demo@cryptopulse.ai</span>
-                    </p>
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => {
-                        setAuthMode("login");
-                        setAuthEmail("demo@cryptopulse.ai");
-                        setAuthPassword("DemoPass123!");
-                      }}
-                    >
-                      Use sample account
-                    </button>
-                  </div>
-                ) : null}
 
                 {currentUser ? (
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-400/20 bg-emerald-400/10 p-4">

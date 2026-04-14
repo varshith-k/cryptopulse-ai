@@ -6,7 +6,11 @@ export type MarketAsset = {
   volume_24h: number | null;
   market_cap: number | null;
   trend: string;
+  sma_20: number | null;
+  ema_20: number | null;
   rsi_14: number | null;
+  macd: number | null;
+  signal: number | null;
   rolling_volatility: number | null;
 };
 

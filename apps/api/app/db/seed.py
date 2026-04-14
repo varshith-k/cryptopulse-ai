@@ -15,7 +15,11 @@ from app.db.models import (
 )
 
 
-def seed_reference_data(session: Session) -> None:
+def seed_reference_data(
+    session: Session,
+    include_demo_user: bool = False,
+    include_demo_alerts: bool = False,
+) -> None:
     assets = [
         ("BTC", "Bitcoin"),
         ("ETH", "Ethereum"),
@@ -27,14 +31,16 @@ def seed_reference_data(session: Session) -> None:
             session.add(WatchedAsset(symbol=symbol, name=name, market="crypto"))
     session.flush()
 
-    demo_user = session.scalar(select(User).where(User.email == "demo@cryptopulse.ai"))
-    if demo_user is None:
-        demo_user = User(
-            email="demo@cryptopulse.ai",
-            hashed_password=hash_password("DemoPass123!"),
-        )
-        session.add(demo_user)
-        session.flush()
+    demo_user = None
+    if include_demo_user:
+        demo_user = session.scalar(select(User).where(User.email == "demo@cryptopulse.ai"))
+        if demo_user is None:
+            demo_user = User(
+                email="demo@cryptopulse.ai",
+                hashed_password=hash_password("DemoPass123!"),
+            )
+            session.add(demo_user)
+            session.flush()
 
     has_snapshots = session.scalar(select(MarketSnapshot.id).limit(1))
     if has_snapshots is None:
@@ -111,7 +117,7 @@ def seed_reference_data(session: Session) -> None:
                     macd=Decimal("7.16"),
                     signal=Decimal("5.02"),
                     rolling_volatility=Decimal("3.40"),
-                    trend_summary="SOL is the strongest momentum leader in the seeded Phase 2 dataset.",
+                    trend_summary="SOL is showing the strongest relative momentum in the seeded fallback dataset.",
                 ),
                 TechnicalIndicator(
                     symbol="ADA",
@@ -149,7 +155,7 @@ def seed_reference_data(session: Session) -> None:
         )
 
     has_alerts = session.scalar(select(UserAlert.id).limit(1))
-    if has_alerts is None and demo_user is not None:
+    if has_alerts is None and include_demo_alerts and demo_user is not None:
         session.add(
             UserAlert(
                 user_id=demo_user.id,

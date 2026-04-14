@@ -98,9 +98,9 @@ docs/           Architecture and build documentation
 
 - API-driven React dashboard wired to the live market overview endpoint
 - Coin detail panel with trend chart proxy and technical indicator cards
-- Demo alert workflow connected to JWT auth and alert creation routes
+- Account-based alert workflow connected to JWT auth and alert creation routes
 - AI insights panel connected to the agent service through Vite proxying
-- Responsive landing plus dashboard experience ready for portfolio demos
+- Responsive landing plus dashboard experience ready for portfolio presentation
 
 ## Phase 4 progress
 
@@ -118,10 +118,10 @@ docs/           Architecture and build documentation
 - Hardened local orchestration with more health checks and clearer developer commands
 - Rewrote project guidance for portfolio presentation and interview walkthroughs
 
-### Demo credentials
+### Authentication
 
-- Email: `demo@cryptopulse.ai`
-- Password: `DemoPass123!`
+- Register a local account through the dashboard or `POST /api/v1/auth/register`
+- Optional sample credentials can be seeded only when `SEED_DEMO_USER=true`
 
 ## Core API surface
 

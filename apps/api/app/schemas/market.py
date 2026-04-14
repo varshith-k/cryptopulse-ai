@@ -39,7 +39,11 @@ class MarketOverviewItem(BaseModel):
     volume_24h: float | None = None
     market_cap: float | None = None
     trend: str
+    sma_20: float | None = None
+    ema_20: float | None = None
     rsi_14: float | None = None
+    macd: float | None = None
+    signal: float | None = None
     rolling_volatility: float | None = None
 
 

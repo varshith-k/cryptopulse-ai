@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     jwt_expiration_minutes: int = 60
     api_cors_origins: str = Field(default="http://localhost:5173", alias="API_CORS_ORIGINS")
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
+    seed_demo_user: bool = Field(default=False, alias="SEED_DEMO_USER")
+    seed_demo_alerts: bool = Field(default=False, alias="SEED_DEMO_ALERTS")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
