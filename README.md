@@ -204,7 +204,14 @@ This gives you a simple always-fresh local setup without needing to keep a manua
 
 ## Resume-ready bullets
 
+Use or adapt these directly for your resume, portfolio, or LinkedIn project section:
+
 - Engineered `CryptoPulse AI`, a production-style crypto analytics platform with a React dashboard, FastAPI APIs, PostgreSQL serving layer, Kafka/Spark pipeline scaffolding, and Dockerized local orchestration.
 - Built backend services for JWT authentication, user-specific alerting, SSE-based live market updates, and analytics endpoints for technical summaries and anomaly detection.
 - Developed a grounded AI agent that tool-calls backend market and analytics APIs to answer natural-language questions, compare assets, detect unusual volatility, and recommend follow-up metrics.
 - Improved developer and operations workflows with health and readiness endpoints, request-level observability hooks, automated tests, and reproducible local setup scripts.
+
+Shorter variant:
+
+- Built a full-stack crypto analytics platform using React, FastAPI, PostgreSQL, Kafka, Spark, and Docker, with grounded AI insights and streaming-oriented architecture.
+- Implemented JWT auth, alerting workflows, live market updates, anomaly detection, and natural-language market analysis over project data.
