@@ -118,6 +118,12 @@ docs/           Architecture and build documentation
 - Hardened local orchestration with more health checks and clearer developer commands
 - Rewrote project guidance for portfolio presentation and interview walkthroughs
 
+## Phase 6 progress
+
+- Split raw ingestion from derived analytics so Kafka now sits between market capture and indicator generation
+- Added a dedicated streaming processor service that consumes market events from Kafka and writes technical indicators plus AI insight cards back to PostgreSQL
+- Kept Spark job scaffolding in place while making the local Kafka processor path actually runnable end to end
+
 ### Authentication
 
 - Register a local account through the dashboard or `POST /api/v1/auth/register`
@@ -152,6 +158,7 @@ Helpful commands:
 - `make frontend-build` verifies the frontend production build
 - `make migrate` runs Alembic migrations inside the API container
 - `python services/ingestion/src/backfill.py` inserts additional sample market rows locally
+- `make stream-processor` runs the Kafka-backed analytics processor locally
 
 ## Architecture walkthrough
 
@@ -189,8 +196,9 @@ This repository now includes the first practical pieces of that path:
 - `services/ingestion/src/coingecko_backfill.py` for CoinGecko historical/reference backfill
 - `services/ingestion/src/runner.py` for a continuous local refresh worker
 - normalized market event modeling and PostgreSQL snapshot writes in `services/ingestion/src/`
+- `services/streaming/src/consumer.py` for Kafka-backed indicator and insight processing
 
-This means the backend can start serving real externally sourced rows as soon as ingestion writes newer snapshots into `market_snapshots`.
+This means the backend can start serving real externally sourced rows as soon as ingestion writes newer snapshots into `market_snapshots`, while the streaming processor refreshes derived analytics asynchronously.
 
 ## Continuous local refresh
 
@@ -199,19 +207,6 @@ For local development, the stack can now run a lightweight continuous ingestion 
 - Default refresh interval: `300` seconds
 - Config variable: `INGESTION_REFRESH_INTERVAL_SECONDS`
 - Docker service: `ingestion`
+- Derived analytics processor service: `streaming`
 
-This gives you a simple always-fresh local setup without needing to keep a manual backfill command running.
-
-## Resume-ready bullets
-
-Use or adapt these directly for your resume, portfolio, or LinkedIn project section:
-
-- Engineered `CryptoPulse AI`, a production-style crypto analytics platform with a React dashboard, FastAPI APIs, PostgreSQL serving layer, Kafka/Spark pipeline scaffolding, and Dockerized local orchestration.
-- Built backend services for JWT authentication, user-specific alerting, SSE-based live market updates, and analytics endpoints for technical summaries and anomaly detection.
-- Developed a grounded AI agent that tool-calls backend market and analytics APIs to answer natural-language questions, compare assets, detect unusual volatility, and recommend follow-up metrics.
-- Improved developer and operations workflows with health and readiness endpoints, request-level observability hooks, automated tests, and reproducible local setup scripts.
-
-Shorter variant:
-
-- Built a full-stack crypto analytics platform using React, FastAPI, PostgreSQL, Kafka, Spark, and Docker, with grounded AI insights and streaming-oriented architecture.
-- Implemented JWT auth, alerting workflows, live market updates, anomaly detection, and natural-language market analysis over project data.
+This gives you a simple always-fresh local setup without needing to keep a manual backfill command running, while still exercising a Kafka-based processing boundary.

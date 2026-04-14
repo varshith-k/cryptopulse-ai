@@ -109,5 +109,19 @@ services:
       kafka:
         condition: service_healthy
 
+  streaming:
+    build:
+      context: ./services/streaming
+    env_file:
+      - .env
+    environment:
+      STREAMING_POSTGRES_URL: postgresql://cryptopulse:cryptopulse@postgres:5432/cryptopulse
+      KAFKA_BROKER: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
 volumes:
   postgres_data:

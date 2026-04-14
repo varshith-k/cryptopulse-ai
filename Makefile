@@ -1,6 +1,6 @@
 PROJECT_NAME=cryptopulse-ai
 
-.PHONY: help up down logs api frontend test lint format frontend-build smoke migrate ingest-stream ingest-backfill ingest-once
+.PHONY: help up down logs api frontend test lint format frontend-build smoke migrate ingest-stream ingest-backfill ingest-once stream-processor
 
 help:
 	@echo "Available targets:"
@@ -18,6 +18,7 @@ help:
 	@echo "  make ingest-stream - Start Binance ingestion locally"
 	@echo "  make ingest-backfill - Run CoinGecko historical backfill locally"
 	@echo "  make ingest-once - Run one live CoinGecko refresh inside Docker"
+	@echo "  make stream-processor - Run the Kafka-backed analytics processor locally"
 
 up:
 	docker compose up --build
@@ -56,6 +57,9 @@ ingest-backfill:
 
 ingest-once:
 	docker compose run --rm ingestion python -m src.coingecko_backfill
+
+stream-processor:
+	cd services/streaming && python3 -m src.consumer
 
 lint:
 	cd apps/api && ruff check .

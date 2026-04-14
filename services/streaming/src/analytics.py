@@ -10,6 +10,14 @@ from src.config import settings
 from src.schema import NormalizedMarketEvent
 
 
+COIN_IDS = {
+    "BTC": "bitcoin",
+    "ETH": "ethereum",
+    "SOL": "solana",
+    "ADA": "cardano",
+}
+
+
 @dataclass
 class ComputedIndicator:
     symbol: str
@@ -34,7 +42,11 @@ class GeneratedInsight:
     generated_at: datetime
 
 
-def fetch_daily_closes(client: httpx.Client, coin_id: str, days: int = 60) -> list[float]:
+def fetch_daily_closes(client: httpx.Client, symbol: str, days: int = 60) -> list[float]:
+    coin_id = COIN_IDS.get(symbol)
+    if coin_id is None:
+        return []
+
     response = client.get(
         f"{settings.coingecko_base_url}/coins/{coin_id}/market_chart",
         params={"vs_currency": "usd", "days": days, "interval": "daily"},
@@ -53,19 +65,20 @@ def compute_indicator(symbol: str, event: NormalizedMarketEvent, closes: list[fl
     ema_20 = ema_20_series[-1] if ema_20_series else None
 
     rsi_14 = _rsi(series, window=14)
-
     ema_12_series = _ema_series(series, span=12)
     ema_26_series = _ema_series(series, span=26)
+
     macd_series: list[float] = []
     offset = len(ema_12_series) - len(ema_26_series)
     if offset >= 0:
         for index, value in enumerate(ema_26_series):
             macd_series.append(ema_12_series[index + offset] - value)
+
     macd = macd_series[-1] if macd_series else None
     signal_series = _ema_series(macd_series, span=9)
     signal = signal_series[-1] if signal_series else None
-
     rolling_volatility = _rolling_volatility(series, window=14)
+
     trend_summary = _build_trend_summary(
         symbol=symbol,
         price=event.price_usd,
@@ -103,7 +116,7 @@ def generate_insights(
             if (indicator.rolling_volatility or 0) >= 2.5
             or (indicator.rsi_14 is not None and (indicator.rsi_14 >= 68 or indicator.rsi_14 <= 35))
         ),
-        key=lambda item: ((item.rolling_volatility or 0) * 0.7) + abs((events[item.symbol]).percent_change_24h),
+        key=lambda item: ((item.rolling_volatility or 0) * 0.7) + abs(events[item.symbol].percent_change_24h),
         reverse=True,
     )
 
@@ -205,7 +218,6 @@ def _rsi(values: list[float], window: int) -> float | None:
 def _rolling_volatility(values: list[float], window: int) -> float | None:
     if len(values) <= window:
         return None
-
     returns = [
         ((current - previous) / previous) * 100
         for previous, current in zip(values[-(window + 1) : -1], values[-window:])
@@ -226,9 +238,7 @@ def _build_trend_summary(
     rolling_volatility: float | None,
 ) -> str:
     regime = "holding above" if sma_20 is not None and price >= sma_20 else "trading below"
-    ema_context = (
-        f"EMA20 {ema_20:.2f}" if ema_20 is not None else "EMA20 still warming up"
-    )
+    ema_context = f"EMA20 {ema_20:.2f}" if ema_20 is not None else "EMA20 still warming up"
     rsi_context = "balanced momentum"
     if rsi_14 is not None and rsi_14 >= 68:
         rsi_context = "overbought momentum"
