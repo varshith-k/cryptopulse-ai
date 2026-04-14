@@ -100,6 +100,13 @@ docs/           Architecture and build documentation
 - AI insights panel connected to the agent service through Vite proxying
 - Responsive landing plus dashboard experience ready for portfolio demos
 
+## Phase 4 progress
+
+- Backend analytics routes for market summaries, anomaly detection, and metric recommendations
+- Grounded agent logic that calls backend analytics tools instead of returning placeholders
+- Rule-based anomaly scoring using volatility, momentum, and RSI extremes
+- Natural-language handling for trend, summary, anomaly, comparison, and recommendation prompts
+
 ### Demo credentials
 
 - Email: `demo@cryptopulse.ai`

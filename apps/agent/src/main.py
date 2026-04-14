@@ -3,6 +3,8 @@ from datetime import UTC, datetime
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from src.logic import answer_question
+
 
 app = FastAPI(
     title="CryptoPulse AI Agent",
@@ -22,23 +24,11 @@ async def health() -> dict[str, str]:
 
 @app.post("/insights/query")
 async def query_insights(payload: InsightRequest) -> dict[str, object]:
-    normalized = payload.question.lower()
-
-    if "btc" in normalized and "today" in normalized:
-        answer = (
-            "BTC is showing positive daily momentum in the seeded Phase 1 dataset. "
-            "Phase 4 will replace this template with tool-backed reasoning over live indicators."
-        )
-    else:
-        answer = (
-            "The agent scaffold is active. In later phases it will query backend tools, "
-            "inspect indicators, and generate grounded multi-step responses."
-        )
+    answer, sources = await answer_question(payload.question)
 
     return {
         "question": payload.question,
         "answer": answer,
         "grounded": True,
-        "sources": ["seeded-market-overview"],
+        "sources": sources,
     }
-
