@@ -177,6 +177,20 @@ Helpful commands:
 - Expand auth and account management with password reset, verification, and stronger session controls.
 - Move from bootstrap SQL plus local Alembic scaffolding to a single migration-led database lifecycle in all environments.
 
+## Live data direction
+
+The recommended production-style data path for this project is:
+
+`Binance WebSocket -> Kafka -> Spark Structured Streaming -> PostgreSQL`
+
+This repository now includes the first practical pieces of that path:
+
+- `services/ingestion/src/binance_stream.py` for real-time Binance mini-ticker ingestion
+- `services/ingestion/src/coingecko_backfill.py` for CoinGecko historical/reference backfill
+- normalized market event modeling and PostgreSQL snapshot writes in `services/ingestion/src/`
+
+This means the backend can start serving real externally sourced rows as soon as ingestion writes newer snapshots into `market_snapshots`.
+
 ## Resume-ready bullets
 
 - Engineered `CryptoPulse AI`, a production-style crypto analytics platform with a React dashboard, FastAPI APIs, PostgreSQL serving layer, Kafka/Spark pipeline scaffolding, and Dockerized local orchestration.

@@ -1,6 +1,6 @@
 PROJECT_NAME=cryptopulse-ai
 
-.PHONY: help up down logs api frontend test lint format frontend-build smoke migrate
+.PHONY: help up down logs api frontend test lint format frontend-build smoke migrate ingest-stream ingest-backfill
 
 help:
 	@echo "Available targets:"
@@ -15,6 +15,8 @@ help:
 	@echo "  make frontend-build - Run the frontend production build"
 	@echo "  make smoke     - Hit core health and readiness endpoints"
 	@echo "  make migrate   - Run Alembic migrations inside the API container"
+	@echo "  make ingest-stream - Start Binance ingestion locally"
+	@echo "  make ingest-backfill - Run CoinGecko historical backfill locally"
 
 up:
 	docker compose up --build
@@ -44,6 +46,12 @@ smoke:
 
 migrate:
 	docker compose run --rm api alembic upgrade head
+
+ingest-stream:
+	cd services/ingestion && python3 src/binance_stream.py
+
+ingest-backfill:
+	cd services/ingestion && python3 src/coingecko_backfill.py
 
 lint:
 	cd apps/api && ruff check .
