@@ -25,6 +25,17 @@ export type MarketOverviewResponse = {
   insights: InsightCard[];
 };
 
+export type MarketHistoryPoint = {
+  observed_at: string;
+  price_usd: number;
+  volume_24h: number | null;
+};
+
+export type MarketHistoryResponse = {
+  symbol: string;
+  points: MarketHistoryPoint[];
+};
+
 export type AlertRead = {
   id: string;
   symbol: string;

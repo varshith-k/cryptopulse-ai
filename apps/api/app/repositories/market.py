@@ -58,3 +58,18 @@ def list_recent_ai_insights(session: Session, limit: int = 3) -> list[AIInsight]
     statement = select(AIInsight).order_by(AIInsight.generated_at.desc()).limit(limit)
     return list(session.scalars(statement).all())
 
+
+def get_market_history(
+    session: Session,
+    symbol: str,
+    points: int = 48,
+) -> list[MarketSnapshot]:
+    statement = (
+        select(MarketSnapshot)
+        .where(MarketSnapshot.symbol == symbol.upper())
+        .order_by(MarketSnapshot.observed_at.desc())
+        .limit(points)
+    )
+    rows = list(session.scalars(statement).all())
+    rows.reverse()
+    return rows

@@ -1,9 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import { Sparkline } from "./components/Sparkline";
+import { HistoryChart } from "./components/HistoryChart";
 import { StatCard } from "./components/StatCard";
+import { useMarketHistory } from "./hooks/useMarketHistory";
 import { useMarketOverview } from "./hooks/useMarketOverview";
 import {
+  formatChartTimestamp,
   formatCompactNumber,
   formatPercent,
   formatTimestamp,
@@ -22,19 +24,6 @@ const starterPrompts = [
   "Which assets show unusual volatility?",
   "Compare ETH and SOL momentum this week.",
 ];
-
-function buildSparklineValues(asset: MarketAsset): number[] {
-  const base = asset.price_usd;
-  const drift = asset.percent_change_24h / 100;
-  const volatility = (asset.rolling_volatility ?? 2) / 100;
-
-  return Array.from({ length: 12 }, (_, index) => {
-    const phase = (index - 6) / 6;
-    const oscillation = Math.sin(index * 0.9) * volatility * 0.55;
-    const momentum = drift * phase;
-    return base * (1 + momentum + oscillation);
-  });
-}
 
 export default function App() {
   const { data, loading, error } = useMarketOverview();
@@ -62,6 +51,11 @@ export default function App() {
   const assets = data?.assets ?? [];
   const selectedAsset =
     assets.find((asset) => asset.symbol === selectedSymbol) ?? assets[0] ?? null;
+  const {
+    data: historyData,
+    loading: historyLoading,
+    error: historyError,
+  } = useMarketHistory(selectedAsset?.symbol ?? null, data?.generated_at);
 
   const positiveAssets = assets.filter((asset) => asset.percent_change_24h > 0).length;
   const averageRsi = useMemo(() => {
@@ -409,7 +403,7 @@ export default function App() {
                           Trend chart
                         </p>
                         <p className="mt-2 font-display text-2xl text-white">
-                          {selectedAsset.symbol} intraday proxy
+                          {selectedAsset.symbol} stored market history
                         </p>
                       </div>
                       <span
@@ -423,10 +417,29 @@ export default function App() {
                       </span>
                     </div>
                     <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-canvas/70 p-4">
-                      <Sparkline
-                        values={buildSparklineValues(selectedAsset)}
-                        tone={selectedAsset.percent_change_24h >= 0 ? "positive" : "negative"}
-                      />
+                      {historyLoading ? (
+                        <div className="h-44 animate-pulse rounded-2xl bg-white/5" />
+                      ) : historyError ? (
+                        <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+                          {historyError}
+                        </div>
+                      ) : (
+                        <HistoryChart
+                          points={historyData?.points ?? []}
+                          tone={selectedAsset.percent_change_24h >= 0 ? "positive" : "negative"}
+                        />
+                      )}
+                      {historyData && historyData.points.length > 0 ? (
+                        <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+                          <span>{formatChartTimestamp(historyData.points[0].observed_at)}</span>
+                          <span>{historyData.points.length} stored points</span>
+                          <span>
+                            {formatChartTimestamp(
+                              historyData.points[historyData.points.length - 1].observed_at,
+                            )}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="mt-5 grid gap-4 sm:grid-cols-3">
                       <StatCard label="Price" value={formatUsd(selectedAsset.price_usd)} />

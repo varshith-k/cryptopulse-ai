@@ -51,3 +51,14 @@ class MarketOverviewResponse(BaseModel):
     generated_at: str
     assets: list[MarketOverviewItem]
     insights: list[InsightCard]
+
+
+class MarketHistoryPoint(BaseModel):
+    observed_at: str
+    price_usd: float
+    volume_24h: float | None = None
+
+
+class MarketHistoryResponse(BaseModel):
+    symbol: str
+    points: list[MarketHistoryPoint]

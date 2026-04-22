@@ -7,6 +7,17 @@ def test_market_overview_uses_seeded_database(client) -> None:
     assert payload["assets"][0]["symbol"] == "SOL"
 
 
+def test_market_history_returns_real_snapshot_points(client) -> None:
+    response = client.get("/api/v1/market/history", params={"symbol": "BTC", "points": 12})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["symbol"] == "BTC"
+    assert len(payload["points"]) >= 1
+    assert "observed_at" in payload["points"][0]
+    assert "price_usd" in payload["points"][0]
+
+
 def test_login_and_fetch_alerts(client) -> None:
     register_response = client.post(
         "/api/v1/auth/register",

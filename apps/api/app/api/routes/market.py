@@ -7,8 +7,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
-from app.schemas.market import MarketOverviewResponse
-from app.services.market import build_market_overview
+from app.schemas.market import MarketHistoryResponse, MarketOverviewResponse
+from app.services.market import build_market_history, build_market_overview
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -18,6 +18,16 @@ async def get_market_overview(
     session: Session = Depends(get_db_session),
 ) -> MarketOverviewResponse:
     return build_market_overview(session)
+
+
+@router.get("/history", response_model=MarketHistoryResponse)
+async def get_market_history(
+    symbol: str,
+    points: int = 48,
+    session: Session = Depends(get_db_session),
+) -> MarketHistoryResponse:
+    normalized_points = max(8, min(points, 240))
+    return build_market_history(session, symbol=symbol, points=normalized_points)
 
 
 @router.get("/stream")

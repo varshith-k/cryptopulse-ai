@@ -34,3 +34,12 @@ export function formatTimestamp(value: string): string {
     day: "numeric",
   }).format(new Date(value));
 }
+
+export function formatChartTimestamp(value: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}

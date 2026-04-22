@@ -2,8 +2,18 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from app.repositories.market import get_latest_market_rows, list_recent_ai_insights
-from app.schemas.market import InsightCard, MarketOverviewItem, MarketOverviewResponse
+from app.repositories.market import (
+    get_latest_market_rows,
+    get_market_history,
+    list_recent_ai_insights,
+)
+from app.schemas.market import (
+    InsightCard,
+    MarketHistoryPoint,
+    MarketHistoryResponse,
+    MarketOverviewItem,
+    MarketOverviewResponse,
+)
 
 
 def build_market_overview(session: Session) -> MarketOverviewResponse:
@@ -58,4 +68,23 @@ def build_market_overview(session: Session) -> MarketOverviewResponse:
         generated_at=datetime.now(UTC).isoformat(),
         assets=assets,
         insights=insight_cards,
+    )
+
+
+def build_market_history(
+    session: Session,
+    symbol: str,
+    points: int = 48,
+) -> MarketHistoryResponse:
+    snapshots = get_market_history(session, symbol=symbol, points=points)
+    return MarketHistoryResponse(
+        symbol=symbol.upper(),
+        points=[
+            MarketHistoryPoint(
+                observed_at=snapshot.observed_at.isoformat(),
+                price_usd=float(snapshot.price_usd),
+                volume_24h=float(snapshot.volume_24h) if snapshot.volume_24h is not None else None,
+            )
+            for snapshot in snapshots
+        ],
     )
