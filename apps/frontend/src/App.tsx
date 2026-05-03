@@ -511,11 +511,16 @@ export default function App() {
                         </div>
                       ) : null}
                     </div>
-                    <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                      <StatCard label="Price" value={formatUsd(selectedAsset.price_usd)} />
+                    <div className="mt-5 grid gap-4 min-[520px]:grid-cols-3">
+                      <StatCard
+                        label="Price"
+                        value={formatUsd(selectedAsset.price_usd)}
+                        density="compact"
+                      />
                       <StatCard
                         label="Market cap"
                         value={formatCompactNumber(selectedAsset.market_cap)}
+                        density="compact"
                       />
                       <StatCard
                         label="Volatility"
@@ -524,6 +529,7 @@ export default function App() {
                             ? `${selectedAsset.rolling_volatility.toFixed(2)}`
                             : "--"
                         }
+                        density="compact"
                       />
                     </div>
                   </div>
