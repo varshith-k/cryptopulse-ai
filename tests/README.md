@@ -1,4 +1,3 @@
 # Test Strategy
 
-This directory will hold cross-service integration tests once the backend, agent, and streaming services share stable contracts. Phase 1 includes a backend unit test under `apps/api/tests` so the project starts with executable validation instead of documentation-only scaffolding.
-
+Most executable tests currently live under `apps/api/tests` because the API owns the main application contracts. This top-level directory is reserved for future cross-service integration tests that exercise the API, agent, ingestion, and streaming services together.

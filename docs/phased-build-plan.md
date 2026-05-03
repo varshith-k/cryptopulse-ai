@@ -1,51 +1,65 @@
-# Phased Build Plan
+# Build Plan
 
-## Phase 1: Architecture and scaffold
+This file tracks the main project milestones. The phases are written as implementation checkpoints rather than a strict calendar.
 
-- Create a monorepo layout
-- Stand up minimal backend, frontend, and agent services
-- Add Docker Compose, environment configuration, and the initial SQL schema
-- Initialize tests and developer workflows
+## Phase 1: Project Scaffold
 
-## Phase 2: Backend and data engineering core
+- Set up the monorepo layout
+- Add initial API, frontend, and agent services
+- Add Docker Compose, environment configuration, and bootstrap SQL
+- Add basic tests and developer commands
 
-- Build domain modules for markets, indicators, alerts, and auth
-- Add SQLAlchemy models and repository layer
-- Implement Kafka producer and normalized event schemas
-- Add a Spark Structured Streaming job for core indicators
-- Create historical backfill and validation utilities
+## Phase 2: Backend and Data Core
 
-## Phase 3: Frontend dashboard
+- Add FastAPI modules for market data, analytics, alerts, auth, and system health
+- Add SQLAlchemy models, repositories, and Alembic support
+- Add JWT auth and user-specific alert storage
+- Add market overview, history, and live stream endpoints
+- Add historical backfill utilities
 
-- Implement landing page and application shell
-- Add live market dashboard and coin detail page
-- Build charting, technical indicator cards, and alert forms
-- Connect frontend state to backend APIs and live streams
+## Phase 3: Dashboard
 
-## Phase 4: Agent and ML analytics
+- Build the React dashboard shell
+- Add market overview cards and a coin detail panel
+- Add historical charting and indicator cards
+- Connect auth and alert creation flows to the backend
+- Proxy API and agent requests through Vite for local development
 
-- Add tool-based market Q&A over project data
-- Generate daily summaries and guided insights
-- Implement anomaly detection and a lightweight forecast path
-- Expose AI insight endpoints to the frontend
+## Phase 4: Analytics and Agent Service
 
-## Phase 5: Production polish
+- Add analytics endpoints for summaries, anomalies, and recommendations
+- Add rule-based anomaly scoring using RSI, momentum, and volatility
+- Add an agent service that calls backend analytics tools
+- Support summary, comparison, anomaly, trend, and recommendation questions
 
-- Expand unit and integration tests
-- Add logging, metrics hooks, and health checks
-- Refine Docker setup and README
-- Add final resume-ready outcomes and tradeoff notes
+## Phase 5: Local Reliability
 
-## Phase 7: Live monitoring and alert intelligence
+- Add readiness and metrics endpoints
+- Add request logging and basic request counters
+- Add agent readiness checks against the backend
+- Expand backend test coverage
+- Improve Docker health checks and Makefile commands
 
-- Evaluate active alert rules against the latest curated market data
-- Store triggered alert history for user accounts
-- Separate active and triggered alert views in the dashboard
-- Add a manual check path that can later be moved behind a scheduler or worker
+## Phase 6: Ingestion and Processing
 
-## Phase 8: Groq-powered grounded agent
+- Add Binance WebSocket ingestion support
+- Add CoinGecko reference/backfill support
+- Add a continuous local ingestion worker
+- Add Kafka-backed processor service for derived indicators and insight rows
+- Keep Spark job scaffolding for a heavier streaming-processing path
 
-- Add a Groq-backed LLM path for market questions
-- Let the agent plan which backend analytics tools to call
-- Compose natural-language answers from tool results with explicit sources
-- Keep deterministic fallback behavior for local demos without an API key
+## Phase 7: Alert Evaluation
+
+- Evaluate active alerts against the latest stored market data
+- Store triggered alert history
+- Deactivate alerts after they trigger
+- Add active and triggered alert views in the dashboard
+- Add a manual "check alerts now" flow
+
+## Phase 8: Groq-backed Agent
+
+- Add optional Groq configuration through environment variables
+- Add LLM-based tool planning over backend analytics tools
+- Merge model-selected tools with deterministic required tools for reliability
+- Compose grounded answers from backend tool results
+- Keep deterministic fallback behavior when Groq is not configured

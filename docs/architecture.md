@@ -1,66 +1,127 @@
-# CryptoPulse AI Architecture
+# Architecture
 
-## System overview
+CryptoPulse AI is organized as a small distributed system. Each service has a narrow responsibility so the project can be run locally while still resembling a production data application.
 
-CryptoPulse AI is designed as a layered platform:
+## Services
 
-1. **Market data ingestion**
-   - Historical backfill scripts fetch OHLCV market data for selected symbols.
-   - Real-time ingestion producers publish normalized tick events to Kafka.
+### Frontend
 
-2. **Streaming analytics**
-   - Spark Structured Streaming reads Kafka topics.
-   - ETL jobs calculate moving averages, RSI, MACD, rolling volatility, and trend summaries.
-   - Curated outputs are written to PostgreSQL and optionally Redis.
+The frontend is a React and TypeScript dashboard built with Vite and Tailwind CSS. It shows the current market overview, coin details, chart history, auth forms, alert management, triggered alert history, and the agent question panel.
 
-3. **Serving layer**
-   - FastAPI exposes prices, trend summaries, indicators, alerts, and live update feeds.
-   - Authentication and user preference management live here.
+### API
 
-4. **AI and ML layer**
-   - The agent service answers grounded questions, generates summaries, and recommends next metrics to inspect.
-   - An anomaly detection module scores unusual volatility and momentum shifts.
+The API is a FastAPI service. It owns the main product surface:
 
-5. **Frontend**
-   - A React dashboard consumes REST and live update channels.
-   - Users can inspect coins, configure alerts, and ask natural-language questions.
+- market overview and history
+- server-sent market stream
+- auth and current-user routes
+- alert creation and evaluation
+- triggered alert history
+- analytics summaries, anomalies, and recommendations
+- readiness and metrics endpoints
 
-## Data flow
+The API uses SQLAlchemy for database access and Pydantic schemas for request/response validation.
+
+### Agent
+
+The agent is a separate FastAPI service. It calls backend analytics tools instead of querying the database directly. If `GROQ_API_KEY` is configured, the service uses Groq to plan tool usage and compose the final answer. If Groq is not configured, it falls back to deterministic responses.
+
+### Ingestion
+
+The ingestion service contains scripts for Binance WebSocket streaming, CoinGecko backfill/reference data, and a continuous local refresh worker. It writes market snapshots and can publish normalized events to Kafka.
+
+### Streaming
+
+The streaming service consumes market events and writes derived indicators or insight rows back to PostgreSQL. Spark job scaffolding is included for a heavier streaming path, while the local Docker setup keeps a lighter processor available for development.
+
+## Data Flow
 
 ```text
-Market APIs / backfill
+External market data
         |
         v
-Kafka ingestion topics
+Ingestion service
         |
-        v
-Spark Structured Streaming jobs
+        +--> PostgreSQL market_snapshots
         |
-        +--> PostgreSQL curated tables
-        +--> Redis cache / live pub-sub
+        +--> Kafka market topics
+                 |
+                 v
+          Streaming processor
+                 |
+                 v
+          technical_indicators / ai_insights
+                 |
+                 v
+FastAPI backend
         |
-        v
-FastAPI serving layer <--> Agent tools
+        +--> React dashboard
         |
-        v
-React dashboard
+        +--> Agent service
 ```
 
-## Key engineering decisions
+## Database Tables
 
-- **FastAPI over Express**
-  - Strong typing with Pydantic
-  - Better synergy with data engineering and AI services in Python
-  - Automatic OpenAPI docs reduce integration friction
+The main tables are:
 
-- **Kafka + Spark**
-  - Realistic for streaming ETL and windowed analytics
-  - Good portfolio signal for data engineering roles
+- `users`
+- `watched_assets`
+- `market_snapshots`
+- `technical_indicators`
+- `user_alerts`
+- `triggered_alerts`
+- `ai_insights`
 
-- **PostgreSQL**
-  - Simple, proven serving layer for aggregated metrics and alert metadata
+Bootstrap SQL is used for local Docker initialization. Alembic migrations are used for later schema changes.
 
-- **Dedicated agent service**
-  - Clean separation between product APIs and AI-specific orchestration
-  - Easier to evolve tool-calling and guardrails independently
+## Agent Flow
 
+```text
+User question
+        |
+        v
+Tool planning
+        |
+        v
+Required tool guardrails
+        |
+        v
+Backend tool calls
+        |
+        v
+Grounded answer with sources
+```
+
+The guardrail step makes common prompts more reliable. For example, comparison questions always include `market.overview`, and risk/volatility questions include anomaly and recommendation data.
+
+## Local Deployment
+
+The local deployment uses Docker Compose:
+
+- `postgres`
+- `redis`
+- `zookeeper`
+- `kafka`
+- `api`
+- `agent`
+- `frontend`
+- `ingestion`
+- `streaming`
+
+The app is designed to be started with:
+
+```bash
+make up
+```
+
+## Production Gaps
+
+The project is ready for local review and demonstration, but it would need more work before a real production deployment:
+
+- managed secrets
+- CI/CD
+- scheduled alert evaluation
+- production migration workflow
+- stronger auth flows
+- persistent logs and metrics
+- cloud deployment configuration
