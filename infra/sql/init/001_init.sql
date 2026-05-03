@@ -45,6 +45,18 @@ CREATE TABLE IF NOT EXISTS user_alerts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS triggered_alerts (
+    id UUID PRIMARY KEY,
+    alert_id UUID NOT NULL REFERENCES user_alerts(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    symbol VARCHAR(16) NOT NULL REFERENCES watched_assets(symbol),
+    alert_type VARCHAR(64) NOT NULL,
+    threshold NUMERIC(18, 8),
+    observed_value NUMERIC(18, 8) NOT NULL,
+    message TEXT NOT NULL,
+    triggered_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS ai_insights (
     id BIGSERIAL PRIMARY KEY,
     symbol VARCHAR(16),
@@ -61,4 +73,3 @@ VALUES
     ('ETH', 'Ethereum'),
     ('SOL', 'Solana')
 ON CONFLICT (symbol) DO NOTHING;
-

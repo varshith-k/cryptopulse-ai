@@ -19,3 +19,16 @@ class AlertRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TriggeredAlertRead(BaseModel):
+    id: uuid.UUID
+    alert_id: uuid.UUID
+    symbol: str
+    alert_type: str
+    threshold: float | None
+    observed_value: float
+    message: str
+    triggered_at: datetime
+
+    model_config = {"from_attributes": True}

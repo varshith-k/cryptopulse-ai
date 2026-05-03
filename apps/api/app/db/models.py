@@ -98,6 +98,30 @@ class UserAlert(Base):
     user: Mapped[User] = relationship(back_populates="alerts")
 
 
+class TriggeredAlert(Base):
+    __tablename__ = "triggered_alerts"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4
+    )
+    alert_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user_alerts.id"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+    symbol: Mapped[str] = mapped_column(
+        String(16), ForeignKey("watched_assets.symbol"), nullable=False
+    )
+    alert_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    threshold: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
+    observed_value: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    triggered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class AIInsight(Base):
     __tablename__ = "ai_insights"
 
