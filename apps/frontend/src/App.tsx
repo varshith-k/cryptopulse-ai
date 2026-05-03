@@ -11,7 +11,14 @@ import {
   formatTimestamp,
   formatUsd,
 } from "./lib/format";
-import type { AgentResponse, AlertRead, MarketAsset, TokenResponse, UserRead } from "./types";
+import type {
+  AgentResponse,
+  AlertRead,
+  MarketAsset,
+  TokenResponse,
+  TriggeredAlertRead,
+  UserRead,
+} from "./types";
 
 const alertTypes = [
   { value: "price_above", label: "Price above" },
@@ -31,6 +38,7 @@ export default function App() {
   const [token, setToken] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserRead | null>(null);
   const [alerts, setAlerts] = useState<AlertRead[]>([]);
+  const [triggeredAlerts, setTriggeredAlerts] = useState<TriggeredAlertRead[]>([]);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [alertSymbol, setAlertSymbol] = useState("BTC");
@@ -80,14 +88,17 @@ export default function App() {
     if (!token) {
       setCurrentUser(null);
       setAlerts([]);
+      setTriggeredAlerts([]);
       window.localStorage.removeItem("cryptopulse_token");
       return;
     }
 
     window.localStorage.setItem("cryptopulse_token", token);
     void loadCurrentUser(token);
-    void loadAlerts(token);
+    void refreshAlertState(token);
   }, [token]);
+
+  const activeAlerts = alerts.filter((alert) => alert.is_active);
 
   async function loadCurrentUser(accessToken: string) {
     try {
@@ -121,6 +132,65 @@ export default function App() {
     setAlerts(payload);
   }
 
+  async function loadTriggeredAlerts(accessToken: string) {
+    const response = await fetch("/api/v1/alerts/triggered", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Triggered alert fetch failed with status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as TriggeredAlertRead[];
+    setTriggeredAlerts(payload);
+  }
+
+  async function refreshAlertState(accessToken: string) {
+    try {
+      await Promise.all([loadAlerts(accessToken), loadTriggeredAlerts(accessToken)]);
+    } catch (nextError) {
+      setAlertsError(
+        nextError instanceof Error ? nextError.message : "Unable to load alert state.",
+      );
+    }
+  }
+
+  async function evaluateAlerts() {
+    if (!token) {
+      setAlertsError("Sign in before checking alerts.");
+      return;
+    }
+
+    setAlertsLoading(true);
+    setAlertsError(null);
+    setAlertSuccess(null);
+
+    try {
+      const response = await fetch("/api/v1/alerts/evaluate", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Alert evaluation failed with status ${response.status}`);
+      }
+
+      const payload = (await response.json()) as TriggeredAlertRead[];
+      setAlertSuccess(
+        payload.length > 0
+          ? `${payload.length} alert${payload.length === 1 ? "" : "s"} triggered.`
+          : "No alerts triggered on the latest market snapshot.",
+      );
+      await refreshAlertState(token);
+    } catch (nextError) {
+      setAlertsError(
+        nextError instanceof Error ? nextError.message : "Unable to evaluate alerts.",
+      );
+    } finally {
+      setAlertsLoading(false);
+    }
+  }
+
   async function submitAlert(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) {
@@ -152,7 +222,7 @@ export default function App() {
       }
 
       setAlertSuccess("Alert created successfully.");
-      await loadAlerts(token);
+      await refreshAlertState(token);
     } catch (nextError) {
       setAlertsError(
         nextError instanceof Error ? nextError.message : "Unable to create the alert.",
@@ -643,12 +713,27 @@ export default function App() {
                 </button>
               </form>
 
+              <button
+                className="button-primary mt-3 w-full"
+                type="button"
+                onClick={() => void evaluateAlerts()}
+                disabled={alertsLoading || !token}
+              >
+                Check alerts now
+              </button>
+
               {alertSuccess ? <p className="mt-4 text-sm text-emerald-300">{alertSuccess}</p> : null}
               {alertsError ? <p className="mt-4 text-sm text-rose-300">{alertsError}</p> : null}
 
               <div className="mt-6 space-y-3">
-                {alerts.length > 0 ? (
-                  alerts.map((alert) => (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
+                    Active alerts
+                  </p>
+                  <span className="text-sm text-slate-400">{activeAlerts.length} active</span>
+                </div>
+                {activeAlerts.length > 0 ? (
+                  activeAlerts.map((alert) => (
                     <div
                       key={alert.id}
                       className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4"
@@ -668,7 +753,41 @@ export default function App() {
                   ))
                 ) : (
                   <div className="rounded-[1.5rem] border border-dashed border-white/10 p-4 text-sm text-slate-400">
-                    Sign in to load alerts for the current account.
+                    {token ? "No active alerts are waiting on the latest snapshot." : "Sign in to load alerts for the current account."}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
+                    Triggered history
+                  </p>
+                  <span className="text-sm text-slate-400">{triggeredAlerts.length} recent</span>
+                </div>
+                {triggeredAlerts.length > 0 ? (
+                  triggeredAlerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="rounded-[1.5rem] border border-amber-300/20 bg-amber-300/10 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-display text-xl text-white">{alert.symbol}</p>
+                          <p className="mt-1 text-sm text-amber-100">{alert.message}</p>
+                          <p className="mt-2 text-xs text-slate-400">
+                            Triggered {formatTimestamp(alert.triggered_at)}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-amber-300/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-amber-200">
+                          hit
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[1.5rem] border border-dashed border-white/10 p-4 text-sm text-slate-400">
+                    No triggered alerts have been recorded yet.
                   </div>
                 )}
               </div>

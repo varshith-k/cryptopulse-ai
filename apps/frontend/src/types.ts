@@ -45,6 +45,17 @@ export type AlertRead = {
   created_at: string;
 };
 
+export type TriggeredAlertRead = {
+  id: string;
+  alert_id: string;
+  symbol: string;
+  alert_type: string;
+  threshold: number | null;
+  observed_value: number;
+  message: string;
+  triggered_at: string;
+};
+
 export type AgentResponse = {
   question: string;
   answer: string;

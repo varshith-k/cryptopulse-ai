@@ -23,13 +23,14 @@ export function useMarketHistory(symbol: string | null, refreshKey?: string) {
       return;
     }
 
+    const requestedSymbol = symbol;
     let active = true;
     setState((current) => ({ ...current, loading: true, error: null }));
 
     async function loadHistory() {
       try {
         const response = await fetch(
-          `/api/v1/market/history?symbol=${encodeURIComponent(symbol)}&points=48`,
+          `/api/v1/market/history?symbol=${encodeURIComponent(requestedSymbol)}&points=48`,
         );
         if (!response.ok) {
           throw new Error(`History request failed with status ${response.status}`);
