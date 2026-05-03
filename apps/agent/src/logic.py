@@ -144,9 +144,10 @@ def _format_metric(value: float | None, digits: int) -> str:
 
 
 async def _answer_with_groq(question: str) -> tuple[str, list[str]] | None:
-    requested_tools = await plan_tools(question, list(AVAILABLE_TOOLS))
-    if not requested_tools:
-        requested_tools = _fallback_tool_plan(question)
+    requested_tools = _merge_tool_plans(
+        await plan_tools(question, list(AVAILABLE_TOOLS)),
+        _required_tool_plan(question),
+    )
 
     tool_results: dict[str, object] = {}
     sources: list[str] = []
@@ -168,25 +169,54 @@ async def _answer_with_groq(question: str) -> tuple[str, list[str]] | None:
     return answer, sources
 
 
-def _fallback_tool_plan(question: str) -> list[str]:
+def _required_tool_plan(question: str) -> list[str]:
     normalized = question.lower()
+    requested_symbols = [
+        symbol for symbol in TRACKED_SYMBOLS if symbol.lower() in normalized
+    ]
     tools = ["market.overview"]
 
-    if "anomal" in normalized or "volatile" in normalized or "risk" in normalized:
-        tools.append("analytics.anomalies")
-
-    if "recommend" in normalized or "inspect next" in normalized or "what next" in normalized:
-        tools.append("analytics.recommendations")
-
-    if (
+    is_comparison = (
+        "compare" in normalized
+        or "versus" in normalized
+        or " vs " in f" {normalized} "
+        or len(requested_symbols) >= 2
+    )
+    asks_about_risk = any(
+        term in normalized
+        for term in ("anomal", "volatile", "volatility", "risk", "worry", "unusual")
+    )
+    asks_for_recommendations = any(
+        term in normalized
+        for term in ("recommend", "inspect next", "what next", "watch", "monitor")
+    )
+    asks_for_summary = (
         "summarize" in normalized
         or "summary" in normalized
         or "today" in normalized
-        or any(symbol.lower() in normalized for symbol in TRACKED_SYMBOLS)
-    ):
+        or bool(requested_symbols)
+    )
+
+    if is_comparison or asks_about_risk:
+        tools.append("analytics.anomalies")
+
+    if asks_for_recommendations or asks_about_risk:
+        tools.append("analytics.recommendations")
+
+    if asks_for_summary or is_comparison or asks_about_risk:
         tools.append("analytics.summary")
 
     return list(dict.fromkeys(tools))
+
+
+def _merge_tool_plans(
+    model_tools: list[str] | None,
+    required_tools: list[str],
+) -> list[str]:
+    merged = [tool for tool in required_tools if tool in AVAILABLE_TOOLS]
+    if model_tools:
+        merged.extend(tool for tool in model_tools if tool in AVAILABLE_TOOLS)
+    return list(dict.fromkeys(merged))
 
 
 async def _call_tool(tool_name: str, question: str) -> object | None:
