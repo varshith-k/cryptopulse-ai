@@ -511,7 +511,7 @@ export default function App() {
                         </div>
                       ) : null}
                     </div>
-                    <div className="mt-5 grid gap-4 min-[520px]:grid-cols-3">
+                    <div className="mt-5 grid grid-cols-2 gap-3">
                       <StatCard
                         label="Price"
                         value={formatUsd(selectedAsset.price_usd)}
