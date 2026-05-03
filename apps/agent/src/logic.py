@@ -6,12 +6,23 @@ from src.client import (
     fetch_recommendations,
     fetch_summary,
 )
+from src.groq_client import compose_grounded_answer, plan_tools
 
 
 TRACKED_SYMBOLS = ("BTC", "ETH", "SOL", "ADA")
+AVAILABLE_TOOLS = (
+    "market.overview",
+    "analytics.anomalies",
+    "analytics.summary",
+    "analytics.recommendations",
+)
 
 
 async def answer_question(question: str) -> tuple[str, list[str]]:
+    groq_answer = await _answer_with_groq(question)
+    if groq_answer is not None:
+        return groq_answer
+
     normalized = question.lower()
     requested_symbols = [symbol for symbol in TRACKED_SYMBOLS if symbol.lower() in normalized]
 
@@ -130,3 +141,73 @@ def _format_metric(value: float | None, digits: int) -> str:
     if value is None:
         return "n/a"
     return f"{value:.{digits}f}"
+
+
+async def _answer_with_groq(question: str) -> tuple[str, list[str]] | None:
+    requested_tools = await plan_tools(question, list(AVAILABLE_TOOLS))
+    if not requested_tools:
+        requested_tools = _fallback_tool_plan(question)
+
+    tool_results: dict[str, object] = {}
+    sources: list[str] = []
+
+    for tool_name in requested_tools:
+        result = await _call_tool(tool_name, question)
+        if result is None:
+            continue
+        tool_results[tool_name] = result
+        sources.append(tool_name)
+
+    if not tool_results:
+        return None
+
+    answer = await compose_grounded_answer(question, tool_results)
+    if answer is None:
+        return None
+
+    return answer, sources
+
+
+def _fallback_tool_plan(question: str) -> list[str]:
+    normalized = question.lower()
+    tools = ["market.overview"]
+
+    if "anomal" in normalized or "volatile" in normalized or "risk" in normalized:
+        tools.append("analytics.anomalies")
+
+    if "recommend" in normalized or "inspect next" in normalized or "what next" in normalized:
+        tools.append("analytics.recommendations")
+
+    if (
+        "summarize" in normalized
+        or "summary" in normalized
+        or "today" in normalized
+        or any(symbol.lower() in normalized for symbol in TRACKED_SYMBOLS)
+    ):
+        tools.append("analytics.summary")
+
+    return list(dict.fromkeys(tools))
+
+
+async def _call_tool(tool_name: str, question: str) -> object | None:
+    if tool_name == "market.overview":
+        return await fetch_market_overview()
+
+    if tool_name == "analytics.anomalies":
+        return await fetch_anomalies()
+
+    if tool_name == "analytics.recommendations":
+        return await fetch_recommendations()
+
+    if tool_name == "analytics.summary":
+        return await fetch_summary(_summary_scope_for_question(question))
+
+    return None
+
+
+def _summary_scope_for_question(question: str) -> str:
+    normalized = question.lower()
+    for symbol in TRACKED_SYMBOLS:
+        if symbol.lower() in normalized:
+            return symbol
+    return "market"

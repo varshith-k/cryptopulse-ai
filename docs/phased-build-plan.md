@@ -36,3 +36,16 @@
 - Refine Docker setup and README
 - Add final resume-ready outcomes and tradeoff notes
 
+## Phase 7: Live monitoring and alert intelligence
+
+- Evaluate active alert rules against the latest curated market data
+- Store triggered alert history for user accounts
+- Separate active and triggered alert views in the dashboard
+- Add a manual check path that can later be moved behind a scheduler or worker
+
+## Phase 8: Groq-powered grounded agent
+
+- Add a Groq-backed LLM path for market questions
+- Let the agent plan which backend analytics tools to call
+- Compose natural-language answers from tool results with explicit sources
+- Keep deterministic fallback behavior for local demos without an API key

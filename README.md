@@ -124,6 +124,20 @@ docs/           Architecture and build documentation
 - Added a dedicated streaming processor service that consumes market events from Kafka and writes technical indicators plus AI insight cards back to PostgreSQL
 - Kept Spark job scaffolding in place while making the local Kafka processor path actually runnable end to end
 
+## Phase 7 progress
+
+- Added one-shot alert evaluation against latest market snapshots and volatility indicators
+- Added triggered alert history storage with authenticated API endpoints
+- Updated the dashboard with active alert and triggered alert views
+- Added a manual “check alerts now” workflow that can evolve into a scheduled worker path
+
+## Phase 8 progress
+
+- Added a Groq-powered agent path using the OpenAI-compatible chat completions API
+- Added LLM-based tool planning over market overview, anomaly, summary, and recommendation tools
+- Kept deterministic fallback logic when `GROQ_API_KEY` is not configured
+- Added grounded answer composition that cites the backend tool sources used
+
 ### Authentication
 
 - Register a local account through the dashboard or `POST /api/v1/auth/register`
@@ -136,6 +150,8 @@ docs/           Architecture and build documentation
 - `POST /api/v1/auth/login`
 - `GET /api/v1/alerts`
 - `POST /api/v1/alerts`
+- `POST /api/v1/alerts/evaluate`
+- `GET /api/v1/alerts/triggered`
 - `GET /api/v1/analytics/anomalies`
 - `GET /api/v1/analytics/summary`
 - `GET /api/v1/analytics/recommendations`
@@ -148,6 +164,14 @@ docs/           Architecture and build documentation
 cp .env.example .env
 make up
 make smoke
+```
+
+To enable the Groq-backed agent, set these in `.env`:
+
+```bash
+GROQ_API_KEY=your-groq-key
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_BASE_URL=https://api.groq.com/openai/v1
 ```
 
 Helpful commands:
