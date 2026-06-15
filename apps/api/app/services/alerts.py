@@ -3,6 +3,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.notifications import notify_triggered_alerts
 from app.db.models import (
     MarketSnapshot,
     TechnicalIndicator,
@@ -60,6 +61,10 @@ def evaluate_alerts_for_user(session: Session, user: User) -> list[TriggeredAler
     session.commit()
     for trigger in triggered:
         session.refresh(trigger)
+
+    # Best-effort outbound notifications; never blocks or fails evaluation.
+    notify_triggered_alerts(triggered)
+
     return triggered
 
 

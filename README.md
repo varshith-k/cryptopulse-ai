@@ -24,9 +24,11 @@ This is not financial advice software. It is a monitoring and explanation layer 
 - JWT-based local accounts
 - Alert creation for price and volatility rules
 - Manual alert evaluation and triggered alert history
+- Outbound alert notifications via webhook (Discord/Slack) or email when an alert triggers
 - Analytics endpoints for summaries, anomalies, and recommendations
+- Real-time volatility detector: a dedicated Kafka consumer running a sliding-window z-score over the live tick stream
 - Groq-backed agent path with deterministic fallback when no key is configured
-- Docker Compose stack for API, frontend, agent, Postgres, Redis, Kafka, ingestion, and streaming services
+- Docker Compose stack for API, frontend, agent, Postgres, Redis, Kafka, ingestion, streaming, and real-time detector services
 
 ## Phase Roadmap
 
@@ -110,6 +112,27 @@ This phase made the agent more flexible.
 - Kept fallback responses for local demos without a Groq key
 - Returned explicit backend sources with agent answers
 
+### Phase 9: Real-time Anomaly Detection
+
+This phase added true stream-time anomaly detection alongside the batch path.
+
+- Added a dedicated `realtime` Kafka consumer service in its own consumer group
+- Implemented a per-symbol sliding-window z-score detector with bounded memory
+- Flagged ticks that deviate beyond a configurable threshold from the rolling mean
+- Persisted flagged spikes and exposed them through a new analytics endpoint
+- Added a live "volatility spikes" panel to the dashboard
+- Added unit tests for the detector algorithm
+
+### Phase 10: Alert Notifications
+
+This phase made triggered alerts reach the user outside the dashboard.
+
+- Added best-effort outbound notifications when an alert triggers
+- Supported a generic webhook channel (Discord/Slack compatible)
+- Supported an email channel over SMTP
+- Kept all channels optional so local demos run unchanged with none configured
+- Isolated delivery failures so they never break alert evaluation
+
 ## Architecture
 
 ```text
@@ -121,11 +144,15 @@ Ingestion service
         +--> PostgreSQL market snapshots
         +--> Kafka market topics
                  |
-                 v
-          Streaming processor
+                 +--> Streaming processor (consumer group A)
+                 |         |
+                 |         v
+                 |    Indicators and insight rows
                  |
-                 v
-          Indicators and insight rows
+                 +--> Real-time detector (consumer group B)
+                           |
+                           v
+                      Sliding-window volatility spikes
                  |
                  v
 FastAPI backend <--> Agent service
@@ -154,6 +181,7 @@ services/
   ingestion/    Market ingestion and backfill workers
   ml/           Anomaly/forecasting modules
   streaming/    Kafka/Spark-oriented processing services
+  realtime/     Sliding-window real-time volatility detector (Kafka consumer)
 packages/
   shared/       Shared contracts and conventions
 infra/
@@ -226,6 +254,7 @@ docker compose up -d --build agent
 - `GET /api/v1/analytics/anomalies`
 - `GET /api/v1/analytics/summary`
 - `GET /api/v1/analytics/recommendations`
+- `GET /api/v1/analytics/realtime-anomalies`
 - `GET /api/v1/system/ready`
 - `GET /api/v1/system/metrics`
 
@@ -245,23 +274,75 @@ Groq can choose tools, but the code still adds required tools for common questio
 Alerts can be created for price and volatility conditions. The current evaluator is manual:
 
 ```text
-Create alert -> Check alerts now -> Store trigger -> Deactivate original alert
+Create alert -> Check alerts now -> Store trigger -> Notify -> Deactivate original alert
 ```
 
-The next product step is to move this behind a scheduled worker and add notifications.
+When an alert triggers, the API sends best-effort notifications to any configured
+channel (see [Alert Notifications](#alert-notifications)). The next product step is to
+move evaluation behind a scheduled worker so it runs automatically.
+
+## Alert Notifications
+
+When an alert triggers during evaluation, the API dispatches a notification to every
+configured channel. Delivery is best-effort: an unconfigured channel is skipped, and a
+channel that fails is logged but never breaks alert evaluation.
+
+Two channels are supported, both configured from `.env`:
+
+```bash
+# Generic webhook (also works with Discord and Slack incoming webhooks)
+ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/xxxx/yyyy
+
+# Email over SMTP (e.g. a Gmail app password)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=you@example.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=you@example.com
+ALERT_EMAIL_TO=you@example.com
+```
+
+The webhook payload includes a Discord/Slack-compatible `content` string plus a
+structured `alert` object for custom consumers. With no channels configured, the app
+runs exactly as before and simply records triggers without sending anything.
+
+## Real-time Volatility Detection
+
+The `realtime` service is a separate Kafka consumer that reads the same market tick
+topic as the streaming processor but in its own consumer group, so the two run
+independently. For each symbol it keeps a bounded `deque` of the most recent ticks
+and scores every new tick against that window:
+
+```text
+z_score = (price - rolling_mean) / rolling_std
+```
+
+When `|z_score|` crosses the configured threshold (default 3.0) the tick is flagged as a
+spike, written to the `realtime_anomalies` table, and surfaced on the dashboard. Memory
+stays flat at O(symbols x window_size) because old ticks fall off the deque automatically.
+
+Detector behavior is tunable from `.env`:
+
+```bash
+REALTIME_WINDOW_SIZE=60     # ticks kept per symbol
+REALTIME_Z_THRESHOLD=3.0    # standard deviations required to flag a spike
+REALTIME_MIN_SAMPLES=10     # ticks needed before scoring begins
+```
+
+This complements the batch anomaly scoring in the analytics endpoints: the batch path
+reasons over daily indicators, while this path reacts to the live stream in real time.
 
 ## Current Limits
 
 - The app is built for local development and product exploration.
-- Alert evaluation is manual right now.
+- Alert evaluation is still triggered manually (notifications fire automatically once it runs).
 - Kafka and Spark pieces are included, but the default local path still uses lightweight Python services where that is faster to run.
 - Auth is basic and does not include password reset or email verification yet.
 - Cloud deployment, CI/CD, and long-term observability still need to be added.
 
 ## Next Product Steps
 
-- Scheduled alert evaluation
-- Email, Discord, or webhook notifications for triggered alerts
+- Scheduled alert evaluation (so notifications fire without the manual check)
 - Agent recommendations for what alert to create
 - Historical comparison tools for the agent
 - CI for backend tests and frontend builds

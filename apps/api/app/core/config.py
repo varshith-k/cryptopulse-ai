@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
     seed_demo_user: bool = Field(default=False, alias="SEED_DEMO_USER")
     seed_demo_alerts: bool = Field(default=False, alias="SEED_DEMO_ALERTS")
+    alert_webhook_url: str | None = Field(default=None, alias="ALERT_WEBHOOK_URL")
+    smtp_host: str | None = Field(default=None, alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_username: str | None = Field(default=None, alias="SMTP_USERNAME")
+    smtp_password: str | None = Field(default=None, alias="SMTP_PASSWORD")
+    smtp_from: str | None = Field(default=None, alias="SMTP_FROM")
+    alert_email_to: str | None = Field(default=None, alias="ALERT_EMAIL_TO")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

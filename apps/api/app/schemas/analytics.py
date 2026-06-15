@@ -22,3 +22,21 @@ class SummaryResponse(BaseModel):
     scope: str
     summary: str
     highlights: list[str]
+
+
+class RealtimeAnomalyRecord(BaseModel):
+    symbol: str
+    price_usd: float
+    window_mean: float
+    window_std: float
+    z_score: float
+    deviation_pct: float
+    sample_size: int
+    direction: str
+    detected_at: str
+
+
+class RealtimeAnomalyResponse(BaseModel):
+    generated_at: str
+    window_summary: str
+    anomalies: list[RealtimeAnomalyRecord]

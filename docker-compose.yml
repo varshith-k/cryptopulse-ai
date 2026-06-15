@@ -123,5 +123,19 @@ services:
       kafka:
         condition: service_healthy
 
+  realtime:
+    build:
+      context: ./services/realtime
+    env_file:
+      - .env
+    environment:
+      REALTIME_POSTGRES_URL: postgresql://cryptopulse:cryptopulse@postgres:5432/cryptopulse
+      KAFKA_BROKER: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
 volumes:
   postgres_data:

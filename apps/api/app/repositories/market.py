@@ -1,7 +1,13 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AIInsight, MarketSnapshot, TechnicalIndicator, WatchedAsset
+from app.db.models import (
+    AIInsight,
+    MarketSnapshot,
+    RealtimeAnomaly,
+    TechnicalIndicator,
+    WatchedAsset,
+)
 
 
 def get_latest_market_rows(
@@ -56,6 +62,17 @@ def get_latest_market_rows(
 
 def list_recent_ai_insights(session: Session, limit: int = 3) -> list[AIInsight]:
     statement = select(AIInsight).order_by(AIInsight.generated_at.desc()).limit(limit)
+    return list(session.scalars(statement).all())
+
+
+def list_recent_realtime_anomalies(
+    session: Session, limit: int = 12
+) -> list[RealtimeAnomaly]:
+    statement = (
+        select(RealtimeAnomaly)
+        .order_by(RealtimeAnomaly.detected_at.desc())
+        .limit(limit)
+    )
     return list(session.scalars(statement).all())
 
 

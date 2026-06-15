@@ -4,6 +4,7 @@ import { HistoryChart } from "./components/HistoryChart";
 import { StatCard } from "./components/StatCard";
 import { useMarketHistory } from "./hooks/useMarketHistory";
 import { useMarketOverview } from "./hooks/useMarketOverview";
+import { useRealtimeAnomalies } from "./hooks/useRealtimeAnomalies";
 import {
   formatChartTimestamp,
   formatCompactNumber,
@@ -14,7 +15,6 @@ import {
 import type {
   AgentResponse,
   AlertRead,
-  MarketAsset,
   TokenResponse,
   TriggeredAlertRead,
   UserRead,
@@ -32,8 +32,35 @@ const starterPrompts = [
   "Compare ETH and SOL momentum this week.",
 ];
 
+// FastAPI returns validation errors as { detail: [{ msg, loc, type }] } and
+// other errors as { detail: "string" }. Normalize both into a readable message
+// so the UI never renders "[object Object]".
+function extractErrorMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === "string" && detail.trim().length > 0) {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) =>
+        item && typeof item === "object" && "msg" in item
+          ? String((item as { msg: unknown }).msg)
+          : null,
+      )
+      .filter((msg): msg is string => Boolean(msg));
+
+    if (messages.length > 0) {
+      return messages.join("; ");
+    }
+  }
+
+  return fallback;
+}
+
 export default function App() {
   const { data, loading, error } = useMarketOverview();
+  const { data: realtimeData } = useRealtimeAnomalies();
+  const realtimeAnomalies = realtimeData?.anomalies ?? [];
   const [selectedSymbol, setSelectedSymbol] = useState("SOL");
   const [token, setToken] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserRead | null>(null);
@@ -218,7 +245,9 @@ export default function App() {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(payload?.detail ?? `Alert creation failed with status ${response.status}`);
+        throw new Error(
+          extractErrorMessage(payload?.detail, `Alert creation failed with status ${response.status}`),
+        );
       }
 
       setAlertSuccess("Alert created successfully.");
@@ -276,7 +305,9 @@ export default function App() {
 
         if (!registerResponse.ok) {
           const payload = await registerResponse.json().catch(() => null);
-          throw new Error(payload?.detail ?? `Registration failed with status ${registerResponse.status}`);
+          throw new Error(
+            extractErrorMessage(payload?.detail, `Registration failed with status ${registerResponse.status}`),
+          );
         }
 
         setAuthSuccess("Account created. Signing you in now.");
@@ -291,7 +322,9 @@ export default function App() {
 
       if (!loginResponse.ok) {
         const payload = await loginResponse.json().catch(() => null);
-        throw new Error(payload?.detail ?? `Login failed with status ${loginResponse.status}`);
+        throw new Error(
+          extractErrorMessage(payload?.detail, `Login failed with status ${loginResponse.status}`),
+        );
       }
 
       const payload = (await loginResponse.json()) as TokenResponse;
@@ -609,6 +642,68 @@ export default function App() {
                 ))}
               </div>
             </section>
+
+            <section className="panel">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p className="eyebrow">Real-time stream</p>
+                  <h2 className="section-title">Live volatility spikes</h2>
+                  <p className="section-copy">
+                    A dedicated Kafka consumer runs a sliding-window z-score detector over the live
+                    tick stream, flagging ticks that deviate beyond the configured threshold from the
+                    rolling mean.
+                  </p>
+                </div>
+                <div className="text-sm text-slate-400">
+                  {realtimeData ? `${realtimeAnomalies.length} recent` : "Connecting"}
+                </div>
+              </div>
+
+              {realtimeAnomalies.length > 0 ? (
+                <div className="mt-5 space-y-3">
+                  {realtimeAnomalies.map((anomaly, index) => {
+                    const isUp = anomaly.direction === "spike_up";
+                    return (
+                      <div
+                        key={`${anomaly.symbol}-${anomaly.detected_at}-${index}`}
+                        className={`rounded-[1.5rem] border p-4 ${
+                          isUp
+                            ? "border-emerald-400/20 bg-emerald-400/10"
+                            : "border-rose-400/20 bg-rose-500/10"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-display text-xl text-white">{anomaly.symbol}</p>
+                            <p className="mt-1 text-sm text-slate-200">
+                              {formatUsd(anomaly.price_usd)} · {formatPercent(anomaly.deviation_pct)} vs
+                              rolling mean
+                            </p>
+                            <p className="mt-2 text-xs text-slate-400">
+                              z-score {anomaly.z_score.toFixed(2)} · {anomaly.sample_size} tick window ·{" "}
+                              {formatTimestamp(anomaly.detected_at)}
+                            </p>
+                          </div>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs uppercase tracking-[0.18em] ${
+                              isUp
+                                ? "bg-emerald-400/10 text-emerald-300"
+                                : "bg-rose-500/10 text-rose-300"
+                            }`}
+                          >
+                            {isUp ? "spike up" : "spike down"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-[1.5rem] border border-dashed border-white/10 p-4 text-sm text-slate-400">
+                  No real-time volatility spikes detected on the live stream yet.
+                </div>
+              )}
+            </section>
           </div>
 
           <div className="space-y-6">
@@ -620,67 +715,81 @@ export default function App() {
                 against the live backend.
               </p>
 
-              <div className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    className={authMode === "login" ? "button-primary flex-1" : "button-secondary flex-1"}
-                    onClick={() => setAuthMode("login")}
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    type="button"
-                    className={authMode === "register" ? "button-primary flex-1" : "button-secondary flex-1"}
-                    onClick={() => setAuthMode("register")}
-                  >
-                    Create account
-                  </button>
-                </div>
-
-                <form className="mt-4 space-y-4" onSubmit={submitAuth}>
-                  <label className="field">
-                    <span>Email</span>
-                    <input
-                      type="email"
-                      value={authEmail}
-                      onChange={(event) => setAuthEmail(event.target.value)}
-                      placeholder="you@example.com"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Password</span>
-                    <input
-                      type="password"
-                      value={authPassword}
-                      onChange={(event) => setAuthPassword(event.target.value)}
-                      placeholder="Enter a secure password"
-                    />
-                  </label>
-                  <button className="button-primary w-full" type="submit" disabled={authLoading}>
-                    {authLoading
-                      ? "Processing..."
-                      : authMode === "login"
-                        ? "Sign in"
-                        : "Create account and sign in"}
-                  </button>
-                </form>
-
-                {currentUser ? (
-                  <div className="mt-4 flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-400/20 bg-emerald-400/10 p-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">Authenticated</p>
-                      <p className="mt-1 text-sm text-white">{currentUser.email}</p>
+              {currentUser ? (
+                <div className="mt-5 rounded-[1.75rem] border border-emerald-400/20 bg-emerald-400/10 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-400/20 font-display text-lg uppercase text-emerald-200">
+                        {currentUser.email.charAt(0)}
+                      </span>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">
+                          Signed in
+                        </p>
+                        <p className="mt-0.5 text-sm text-white">{currentUser.email}</p>
+                      </div>
                     </div>
                     <button type="button" className="button-secondary" onClick={signOut}>
                       Sign out
                     </button>
                   </div>
-                ) : null}
+                  {authSuccess ? (
+                    <p className="mt-4 text-sm text-emerald-300">{authSuccess}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      className={authMode === "login" ? "button-primary flex-1" : "button-secondary flex-1"}
+                      onClick={() => setAuthMode("login")}
+                    >
+                      Sign in
+                    </button>
+                    <button
+                      type="button"
+                      className={authMode === "register" ? "button-primary flex-1" : "button-secondary flex-1"}
+                      onClick={() => setAuthMode("register")}
+                    >
+                      Create account
+                    </button>
+                  </div>
 
-                {authSuccess ? <p className="mt-4 text-sm text-emerald-300">{authSuccess}</p> : null}
-                {authError ? <p className="mt-4 text-sm text-rose-300">{authError}</p> : null}
-              </div>
+                  <form className="mt-4 space-y-4" onSubmit={submitAuth}>
+                    <label className="field">
+                      <span>Email</span>
+                      <input
+                        type="email"
+                        value={authEmail}
+                        onChange={(event) => setAuthEmail(event.target.value)}
+                        placeholder="you@example.com"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Password</span>
+                      <input
+                        type="password"
+                        value={authPassword}
+                        onChange={(event) => setAuthPassword(event.target.value)}
+                        placeholder="Enter a secure password"
+                      />
+                    </label>
+                    <button className="button-primary w-full" type="submit" disabled={authLoading}>
+                      {authLoading
+                        ? "Processing..."
+                        : authMode === "login"
+                          ? "Sign in"
+                          : "Create account and sign in"}
+                    </button>
+                  </form>
+
+                  {authSuccess ? (
+                    <p className="mt-4 text-sm text-emerald-300">{authSuccess}</p>
+                  ) : null}
+                  {authError ? <p className="mt-4 text-sm text-rose-300">{authError}</p> : null}
+                </div>
+              )}
 
               <form className="mt-5 space-y-4" onSubmit={submitAlert}>
                 <div className="grid gap-4 sm:grid-cols-2">

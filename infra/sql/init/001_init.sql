@@ -67,6 +67,22 @@ CREATE TABLE IF NOT EXISTS ai_insights (
     generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS realtime_anomalies (
+    id BIGSERIAL PRIMARY KEY,
+    symbol VARCHAR(16) NOT NULL,
+    price_usd NUMERIC(18, 8) NOT NULL,
+    window_mean NUMERIC(18, 8) NOT NULL,
+    window_std NUMERIC(18, 8) NOT NULL,
+    z_score NUMERIC(10, 4) NOT NULL,
+    deviation_pct NUMERIC(10, 4) NOT NULL,
+    sample_size INTEGER NOT NULL,
+    direction VARCHAR(16) NOT NULL,
+    detected_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_realtime_anomalies_detected_at
+ON realtime_anomalies (detected_at DESC);
+
 INSERT INTO watched_assets(symbol, name)
 VALUES
     ('BTC', 'Bitcoin'),

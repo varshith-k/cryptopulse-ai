@@ -2,7 +2,17 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, Uuid, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -132,5 +142,22 @@ class AIInsight(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     confidence: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
     generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class RealtimeAnomaly(Base):
+    __tablename__ = "realtime_anomalies"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    symbol: Mapped[str] = mapped_column(String(16), nullable=False)
+    price_usd: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    window_mean: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    window_std: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    z_score: Mapped[Decimal] = mapped_column(Numeric(10, 4), nullable=False)
+    deviation_pct: Mapped[Decimal] = mapped_column(Numeric(10, 4), nullable=False)
+    sample_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    direction: Mapped[str] = mapped_column(String(16), nullable=False)
+    detected_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
