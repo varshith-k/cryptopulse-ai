@@ -63,6 +63,24 @@ export type AgentResponse = {
   sources: string[];
 };
 
+export type RealtimeAnomaly = {
+  symbol: string;
+  price_usd: number;
+  window_mean: number;
+  window_std: number;
+  z_score: number;
+  deviation_pct: number;
+  sample_size: number;
+  direction: string;
+  detected_at: string;
+};
+
+export type RealtimeAnomalyResponse = {
+  generated_at: string;
+  window_summary: string;
+  anomalies: RealtimeAnomaly[];
+};
+
 export type TokenResponse = {
   access_token: string;
   token_type: string;

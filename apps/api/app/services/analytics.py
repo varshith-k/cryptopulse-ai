@@ -2,7 +2,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from app.schemas.analytics import AnomalyRecord, AnomalyResponse, SummaryResponse
+from app.repositories.market import list_recent_realtime_anomalies
+from app.schemas.analytics import (
+    AnomalyRecord,
+    AnomalyResponse,
+    RealtimeAnomalyRecord,
+    RealtimeAnomalyResponse,
+    SummaryResponse,
+)
 from app.services.market import build_market_overview
 
 
@@ -113,6 +120,35 @@ def generate_market_summary(session: Session, scope: str = "market") -> SummaryR
         scope="market",
         summary=summary,
         highlights=highlights,
+    )
+
+
+def list_realtime_anomalies(session: Session, limit: int = 12) -> RealtimeAnomalyResponse:
+    rows = list_recent_realtime_anomalies(session, limit=limit)
+    anomalies = [
+        RealtimeAnomalyRecord(
+            symbol=row.symbol,
+            price_usd=float(row.price_usd),
+            window_mean=float(row.window_mean),
+            window_std=float(row.window_std),
+            z_score=float(row.z_score),
+            deviation_pct=float(row.deviation_pct),
+            sample_size=row.sample_size,
+            direction=row.direction,
+            detected_at=row.detected_at.isoformat(),
+        )
+        for row in rows
+    ]
+
+    summary = (
+        f"{len(anomalies)} real-time volatility spike(s) detected from the live tick stream."
+        if anomalies
+        else "No real-time volatility spikes detected on the live tick stream yet."
+    )
+    return RealtimeAnomalyResponse(
+        generated_at=datetime.now(UTC).isoformat(),
+        window_summary=summary,
+        anomalies=anomalies,
     )
 
 

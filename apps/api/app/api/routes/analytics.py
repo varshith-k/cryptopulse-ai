@@ -2,10 +2,15 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
-from app.schemas.analytics import AnomalyResponse, SummaryResponse
+from app.schemas.analytics import (
+    AnomalyResponse,
+    RealtimeAnomalyResponse,
+    SummaryResponse,
+)
 from app.services.analytics import (
     detect_market_anomalies,
     generate_market_summary,
+    list_realtime_anomalies,
     recommend_metrics,
 )
 
@@ -33,3 +38,11 @@ async def get_metric_recommendations(
     session: Session = Depends(get_db_session),
 ) -> list[str]:
     return recommend_metrics(session)
+
+
+@router.get("/realtime-anomalies", response_model=RealtimeAnomalyResponse)
+async def get_realtime_anomalies(
+    limit: int = Query(default=12, ge=1, le=100),
+    session: Session = Depends(get_db_session),
+) -> RealtimeAnomalyResponse:
+    return list_realtime_anomalies(session, limit=limit)
