@@ -7,15 +7,15 @@ from src.client import (
     fetch_summary,
 )
 from src.groq_client import compose_grounded_answer, plan_tools
+from src.tools import call_tool as call_registry_tool
+from src.tools import tool_names
 
 
 TRACKED_SYMBOLS = ("BTC", "ETH", "SOL", "ADA")
-AVAILABLE_TOOLS = (
-    "market.overview",
-    "analytics.anomalies",
-    "analytics.summary",
-    "analytics.recommendations",
-)
+# The agent's callable toolset is the shared registry (src.tools) — the same
+# tools exposed to external MCP clients via src.mcp_server. Defining it in one
+# place keeps the agent and the MCP surface in lockstep.
+AVAILABLE_TOOLS = tuple(tool_names())
 
 
 async def answer_question(question: str) -> tuple[str, list[str]]:
@@ -220,19 +220,17 @@ def _merge_tool_plans(
 
 
 async def _call_tool(tool_name: str, question: str) -> object | None:
-    if tool_name == "market.overview":
-        return await fetch_market_overview()
-
-    if tool_name == "analytics.anomalies":
-        return await fetch_anomalies()
-
-    if tool_name == "analytics.recommendations":
-        return await fetch_recommendations()
-
-    if tool_name == "analytics.summary":
-        return await fetch_summary(_summary_scope_for_question(question))
-
-    return None
+    # Route every tool call through the shared registry so the agent invokes the
+    # exact same handlers an external MCP client would. The summary tool needs a
+    # scope derived from the question; the rest take no arguments.
+    try:
+        if tool_name == "analytics.summary":
+            return await call_registry_tool(
+                tool_name, scope=_summary_scope_for_question(question)
+            )
+        return await call_registry_tool(tool_name)
+    except KeyError:
+        return None
 
 
 def _summary_scope_for_question(question: str) -> str:

@@ -17,6 +17,24 @@ Crypto tools often split data, alerts, and explanations across different apps. C
 
 This is not financial advice software. It is a monitoring and explanation layer for crypto market data.
 
+## Course Concepts Demonstrated
+
+This project demonstrates the following key concepts from the AI Agents Intensive course
+(the required minimum is three):
+
+| Key concept | Where it lives | What it does |
+| --- | --- | --- |
+| **Agent system** | [apps/agent/src/logic.py](apps/agent/src/logic.py), [apps/agent/src/groq_client.py](apps/agent/src/groq_client.py) | An LLM-driven agent that plans which backend tools to call, enforces required tools per question type, then composes a grounded answer that cites its sources. |
+| **MCP Server** | [apps/agent/src/mcp_server.py](apps/agent/src/mcp_server.py), [apps/agent/src/tools.py](apps/agent/src/tools.py) | A Model Context Protocol server that exposes the four grounded analytics tools to any MCP client (Claude Desktop, MCP Inspector, other agents) — from the same shared registry the agent itself uses. |
+| **Security features** | [apps/api](apps/api) (JWT auth), `.env` / [.env.example](.env.example) | JWT-based accounts, per-user alert isolation, and secrets kept out of code (only `.env.example` is committed). |
+| **Deployability** | [docker-compose.yml](docker-compose.yml), [Makefile](Makefile) | One-command Docker Compose stack for all ten services, with health/readiness endpoints for each. |
+| **Agent skills / Agents CLI** | [apps/agent/src/cli.py](apps/agent/src/cli.py) | A terminal CLI that queries the grounded agent and prints the answer plus its tool sources. |
+
+The single most important design choice is that the agent's toolset and the MCP
+server are built from **one shared registry** ([apps/agent/src/tools.py](apps/agent/src/tools.py)),
+so our own agent and any external MCP client always call the exact same grounded
+tools — they can never drift apart.
+
 ## Current Features
 
 - Market overview cards with price, 24-hour movement, volume, RSI, volatility, and trend context
@@ -268,6 +286,66 @@ The agent calls backend tools before answering. Current tools include:
 - `analytics.recommendations`
 
 Groq can choose tools, but the code still adds required tools for common question types. For example, comparison questions always include market overview data, and risk or volatility questions include anomaly and recommendation data.
+
+## MCP Server
+
+The same four grounded tools are also exposed over the **Model Context Protocol**
+so any MCP-compatible client can call them. The server
+([apps/agent/src/mcp_server.py](apps/agent/src/mcp_server.py)) is built from the
+shared tool registry ([apps/agent/src/tools.py](apps/agent/src/tools.py)), so the
+MCP surface and the agent's own toolset are always identical.
+
+Run it locally over stdio (the transport MCP clients launch):
+
+```bash
+cd apps/agent
+pip install -r requirements.txt
+python -m src.mcp_server
+```
+
+Point an MCP client (Claude Desktop, the MCP Inspector, or another agent) at it:
+
+```json
+{
+  "mcpServers": {
+    "cryptopulse": {
+      "command": "python",
+      "args": ["-m", "src.mcp_server"],
+      "cwd": "apps/agent",
+      "env": { "BACKEND_BASE_URL": "http://localhost:8000" }
+    }
+  }
+}
+```
+
+Exposed tools: `market_overview`, `analytics_anomalies`, `analytics_recommendations`,
+and `analytics_summary(scope)`. Each tool's docstring and type hints become its
+public MCP schema, so the client knows what it can call and why.
+
+## Agent CLI
+
+A thin terminal client ([apps/agent/src/cli.py](apps/agent/src/cli.py)) queries the
+running agent and prints the grounded answer plus the tool sources behind it:
+
+```bash
+cd apps/agent
+python -m src.cli "which coins are trending upward today?"
+```
+
+It calls the agent's HTTP endpoint (the same one the dashboard uses), so it
+exercises the full plan-tools → call-tools → compose-answer path.
+
+## Security
+
+- **JWT accounts** — local registration/login issue signed tokens; protected
+  routes require a valid token.
+- **Per-user isolation** — alerts and triggered-alert history are scoped to the
+  authenticated user.
+- **No secrets in code** — all credentials (Groq key, SMTP password, webhook URL,
+  JWT secret) come from `.env`, which is git-ignored. Only [.env.example](.env.example)
+  with placeholder values is committed.
+- **Isolated failures** — notification delivery is best-effort and sandboxed so a
+  failing channel can never break alert evaluation.
 
 ## Alert Flow
 
