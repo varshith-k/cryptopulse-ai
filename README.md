@@ -325,11 +325,20 @@ public MCP schema, so the client knows what it can call and why.
 ## Agent CLI
 
 A thin terminal client ([apps/agent/src/cli.py](apps/agent/src/cli.py)) queries the
-running agent and prints the grounded answer plus the tool sources behind it:
+running agent and prints the grounded answer plus the tool sources behind it. The
+agent must be running first (`make up` or `docker compose up -d --build`).
+
+Run it inside the agent container (no host dependencies needed):
+
+```bash
+docker compose exec agent python -m src.cli "which coins are trending upward today?"
+```
+
+Or run it on the host (requires `python3` and `pip install httpx`):
 
 ```bash
 cd apps/agent
-python -m src.cli "which coins are trending upward today?"
+python3 -m src.cli "which coins are trending upward today?"
 ```
 
 It calls the agent's HTTP endpoint (the same one the dashboard uses), so it
